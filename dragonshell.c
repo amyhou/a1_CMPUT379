@@ -45,15 +45,10 @@ int main(int argc, char **argv) {
     // tokenize into separate commands using delimiter ';'
     tokenize(&input[0], ";", &tokArgs[0]);
 
-    char * token = "";
-    char exit[] = "exit";
     int i = 0;
-    printf("tokArgs[0]: %s %d\n", tokArgs[0], (int)strlen(tokArgs[0]));
     while (tokArgs[i] != NULL)
     {
-      token = tokArgs[i];
-      printf("len: %d, cmp: %d\n", strlen(exit), strcmp(token,exit));
-      if (strcmp(token, exit))
+      if (strcmp(tokArgs[i], "exit"))
       {
         printf("setting prog to false\n");
         prog = FALSE;
