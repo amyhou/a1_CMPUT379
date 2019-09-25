@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
         prog = FALSE;
         break;
       }
-      i++
+      i++;
     }
   }
   return 0;
