@@ -27,13 +27,14 @@ int main(int argc, char **argv) {
   // print the string prompt without a newline, before beginning to read
   // tokenize the input, run the command(s), and print the result
   // do this in a loop
-  while (true)
+  while (1)
   {
     char input[PATH_MAX];
-    char ** tokArgs;
+    char * tokArgs[PATH_MAX];
     printf("dragonshell > ");
     scanf("%s", &input[0]);
-    tokenize(&input[0], ";", *tokArgs);
+    tokenize(&input[0], ";", &tokArgs[0]);
+    printf("%s %s\n",tokArgs[0], tokArgs[1]);
     break;
   }
   return 0;
