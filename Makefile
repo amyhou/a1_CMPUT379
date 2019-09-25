@@ -14,4 +14,4 @@ dragonshell.o: dragonshell.c
 
 dragonshell: $(OBJECTS)
 	$(CC) -o dragonshell $(OBJECTS)
-	echo "Done!"
+	echo "\nDone!\n"
