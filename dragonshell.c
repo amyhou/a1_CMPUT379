@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
   // print the string prompt without a newline, before beginning to read
   // tokenize the input, run the command(s), and print the result
   // do this in a loop
-  while (true)
+  while (1)
   {
     char input[PATH_MAX];
     char ** tokArgs;
