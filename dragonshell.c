@@ -48,8 +48,8 @@ int main(int argc, char **argv) {
     while (tokArgs[i] != NULL)
     {
       token = tokArgs[i];
-      printf("%s\n", token);
-      if (token == "exit\0")
+      printf("%s\n", token=="exit");
+      if (token == "exit")
       {
         printf("setting prog to false\n");
         prog = FALSE;
