@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     // get input
     scanf("%s", &input[0]);
 
-    printf("%d", len(input));
+    printf("%d", strlen(input));
 
     // tokenize into separate commands using delimiter ';'
     tokenize(&input[0], ";", &tokArgs[0]);
