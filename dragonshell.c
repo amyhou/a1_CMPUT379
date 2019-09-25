@@ -29,11 +29,16 @@ int main(int argc, char **argv) {
   // do this in a loop
   while (1)
   {
-    char input[PATH_MAX];
+    char * input;
     char * tokArgs[PATH_MAX];
+    // print string prompt
     printf("dragonshell > ");
-    scanf("%s", &input[0]);
-    tokenize(&input[0], ";", &tokArgs[0]);
+    // get input
+    scanf("%s", &input);
+    // tokenize into separate commands using delimiter ';'
+    tokenize(&input, ";", &tokArgs[0]);
+
+    for (int i = 0; i <)
     printf("%s %s\n",tokArgs[0], tokArgs[1]);
     break;
   }
