@@ -43,7 +43,8 @@ int main(int argc, char **argv) {
     tokenize(&input[0], ";", &tokArgs[0]);
 
     char * token = "";
-    for (int i = 0; token != NULL; i++)
+    int i = 0;
+    while (tokArgs[i] != NULL)
     {
       token = tokArgs[i];
       printf("%s\n", token);
