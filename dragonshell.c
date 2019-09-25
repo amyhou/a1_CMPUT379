@@ -50,7 +50,10 @@ int main(int argc, char **argv) {
     {
       // tokenize into separate commands/arguments using delimiter ' '
       char * cmdArgs[PATH_MAX];
+      printf("tokArgs[i]: %s", tokArgs[i]);
+
       tokenize(tokArgs[0], ' ', &cmdArgs[0]);
+      
       printf("%s %s", cmdArgs[0], cmdArgs[1]);
       if (strcmp(tokArgs[i], "exit") == 0)
       {
