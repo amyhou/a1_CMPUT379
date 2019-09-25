@@ -48,7 +48,8 @@ int main(int argc, char **argv) {
     int i = 0;
     while (tokArgs[i] != NULL)
     {
-      printf("token: %s, len: %d\n", tokArgs[i], strlen(input));
+      printf("token: %s, len: %d\n", tokArgs[i], strlen(tokArgs[i]));
+      printf("strcmp tokArgs[i] and exit: %d", strcmp(tokArgs[i], "exit"));
       if (strcmp(tokArgs[i], "exit"))
       {
         printf("setting prog to false\n");
