@@ -33,8 +33,8 @@ int main(int argc, char **argv) {
   int prog = TRUE;
   while (prog == TRUE)
   {
-    char * input;
-    char ** tokArgs;
+    char input[PATH_MAX];
+    char * tokArgs[PATH_MAX];
     // print string prompt
     printf("dragonshell > ");
     // get input
@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
 
     char * token = "";
     int i = 0;
-    printf("tokArgs[0]: %s\n", tokArgs[0]);
+    printf("tokArgs[0]: %s %d\n", tokArgs[0], strlen(tokArgs[0]));
     while (tokArgs[i] != NULL)
     {
       token = tokArgs[i];
