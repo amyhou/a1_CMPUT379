@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
     {
       token = tokArgs[i];
       printf("%s\n", token);
-      if (token == "exit")
+      if (token == "exit\n")
       {
         printf("setting prog to false\n");
         prog = FALSE;
