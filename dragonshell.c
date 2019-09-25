@@ -38,13 +38,11 @@ int main(int argc, char **argv) {
     // tokenize into separate commands using delimiter ';'
     tokenize(&input[0], ";", &tokArgs[0]);
 
+    char * token;
     for (int i = 0; token != NULL && token != "exit"; i++)
     {
-      printf("%s\n", tokArgs[i]);
-      if (tokArgs[i] == "exit" || tokArgs[i] == NULL)
-      {
-        break;
-      }
+      token = tokArgs[i];
+      printf("%s\n", token);
     }
     break;
   }
