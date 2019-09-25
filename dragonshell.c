@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <limits.h>
 
 /**
  * @brief Tokenize a C string
