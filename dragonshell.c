@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
     while (tokArgs[i] != NULL)
     {
       token = tokArgs[i];
-      printf("%d\n", strcmp(token,"exit"));
+      printf("len: %d, cmp: %d\n", strlen(token), strcmp(token,"exit"));
       if (strcmp(token,"exit"))
       {
         printf("setting prog to false\n");
