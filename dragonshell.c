@@ -48,11 +48,12 @@ int main(int argc, char **argv) {
     int i = 0;
     while (tokArgs[i] != NULL)
     {
-      /* printf("token: %s, len: %d\n", tokArgs[i], strlen(tokArgs[i]));
-      printf("strcmp tokArgs[i] and exit: %d\n", strcmp(tokArgs[i], "exit")); */
+      // tokenize into separate commands/arguments using delimiter ' '
+      char * cmdArgs[PATH_MAX];
+      tokenize(tokArgs[0], ' ', &cmdArgs[0]);
+      printf("%s %s", cmdArgs[0], cmdArgs[1]);
       if (strcmp(tokArgs[i], "exit") == 0)
       {
-        /* printf("setting prog to false\n"); */
         prog = FALSE;
         break;
       }
