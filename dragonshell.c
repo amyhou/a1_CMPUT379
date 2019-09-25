@@ -44,6 +44,7 @@ int main(int argc, char **argv) {
 
     char * token = "";
     int i = 0;
+    printf("tokArgs[0]: %s\n", tokArgs[0]);
     while (tokArgs[i] != NULL)
     {
       token = tokArgs[i];
