@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -02
+CFLAGS = -Wall -O2
 OBJECTS = dragonshell.o
 
 .PHONY: all clean
