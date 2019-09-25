@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
       printf("%s\n", token);
       if (token == "exit")
       {
+        printf("setting prog to false\n");
         prog = FALSE;
         break;
       }
