@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
     // tokenize into separate commands using delimiter ';'
     tokenize(&input[0], ";", &tokArgs[0]);
 
-    char * token;
+    char * token = "";
     for (int i = 0; token != NULL; i++)
     {
       token = tokArgs[i];
@@ -50,6 +50,7 @@ int main(int argc, char **argv) {
       if (token == "exit")
       {
         prog = FALSE;
+        break;
       }
     }
   }
