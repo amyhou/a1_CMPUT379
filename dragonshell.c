@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
 
     for (int i = 0; i < PATH_MAX; i++)
     {
-    printf("%s %s\n",tokArgs[0], tokArgs[1]);
+    printf("%s\n",tokArgs[i]);
       if (tokArgs[i] == "exit" || tokArgs[i] == NULL)
       {
         break;
