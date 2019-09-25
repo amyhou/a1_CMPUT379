@@ -38,9 +38,14 @@ int main(int argc, char **argv) {
     // tokenize into separate commands using delimiter ';'
     tokenize(&input[0], ";", &tokArgs[0]);
 
-    //for (int i = 0; i <)
+    for (int i = 0; i < PATH_MAX; i++)
+    {
     printf("%s %s\n",tokArgs[0], tokArgs[1]);
-    break;
+      if (tokArgs[i] == "exit" || tokArgs[i] == NULL)
+      {
+        break;
+      }
+    }
   }
   return 0;
 }
