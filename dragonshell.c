@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     // get input
     scanf("%s", &input[0]);
 
-    printf("%d", strlen(input));
+
 
     // tokenize into separate commands using delimiter ';'
     tokenize(&input[0], ";", &tokArgs[0]);
@@ -48,6 +48,7 @@ int main(int argc, char **argv) {
     int i = 0;
     while (tokArgs[i] != NULL)
     {
+      printf("token: %s, len: %d\n", tokArgs[i], strlen(input));
       if (strcmp(tokArgs[i], "exit"))
       {
         printf("setting prog to false\n");
