@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <limits.h>
 
+#define TRUE  (1)
+#define FALSE (0)
 /**
  * @brief Tokenize a C string
  *
@@ -27,7 +29,9 @@ int main(int argc, char **argv) {
   // print the string prompt without a newline, before beginning to read
   // tokenize the input, run the command(s), and print the result
   // do this in a loop
-  while (1)
+  // program running flag
+  int prog = TRUE;
+  while (prog == TRUE)
   {
     char input[PATH_MAX];
     char * tokArgs[PATH_MAX];
@@ -39,12 +43,15 @@ int main(int argc, char **argv) {
     tokenize(&input[0], ";", &tokArgs[0]);
 
     char * token;
-    for (int i = 0; token != NULL && token != "exit"; i++)
+    for (int i = 0; token != NULL; i++)
     {
       token = tokArgs[i];
       printf("%s\n", token);
+      if (token == "exit")
+      {
+        prog = FALSE;
+      }
     }
-    break;
   }
   return 0;
 }
