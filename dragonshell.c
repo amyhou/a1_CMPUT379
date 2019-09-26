@@ -107,9 +107,28 @@ int main(int argc, char **argv) {
         // _exit(0);
         return 0;
       }
-      else // command not found
+      else // try to exec
       {
-        printf("dragonshell: command not found\n");
+        // char path[PATH_MAX];
+        // printf("Enter path of program: ");
+        // scanf("%s", &cmdArgs[0]);
+        if ((pid = fork()) < 0) perror("fork error!");
+        if (pid == 0) {
+            // printf("Child\n");
+            char *argv1[] = {NULL}; // change this!
+            printf("cmdArgs[1]: %s\n", cmdArgs[1]);
+            int rc = execve(cmdArgs[0], cmdArgs, argv1);
+            if (rc == -1)
+            {
+                perror("dragonshell: command not found\n");
+            }
+        }
+        else {
+            sleep(1); // should not use sleep!
+            // printf("Parent killing child.\n");
+            kill(pid, SIGKILL);
+        }
+        // printf("dragonshell: command not found\n");
       }
       i++;
     }
