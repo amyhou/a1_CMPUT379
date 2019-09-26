@@ -25,30 +25,51 @@ void tokenize(char* str, const char* delim, char ** argv) {
   }
 }
 
+void changeDirectory(char * dirPath) {
+  int rc;
+  if ((rc = chdir(dirPath)) != 0)
+  {
+    printf("Failed to change directory.");
+    fflush(stdout);
+  }
+}
+
+void printWorkingDirectory() {
+  char path[PATH_MAX];
+  printf("%s\n", getcwd(path, PATH_MAX));
+  fflush(stdout);
+}
+
 int main(int argc, char **argv) {
   // print the string prompt without a newline, before beginning to read
   // tokenize the input, run the command(s), and print the result
   // do this in a loop
-  // program running flag
-  int prog = TRUE;
+
+  pid_t pid; //shared child pid
 
   /* Print welcome message */
   printf("Welcome to DragonShell!\n");
   printf("-------------------------\n");
 
-  while (prog == TRUE)
+  while (TRUE)
   {
     char input[PATH_MAX] = "";
     char * tokArgs[PATH_MAX] = {NULL};
 
     // print string prompt
     printf("dragonshell > ");
-    // get input
-    if (scanf("%[^\n]%*c", &input[0]) != 1)
+
+    if (fgets(&input[0], PATH_MAX, stdin) == NULL)
     {
       printf("\ndragonshell: Failed to read from stdin.\n");
-      fflush(stdin);
+      fflush(stdout);
       continue;
+    }
+
+    // get rid of newline character at end
+    size_t len = strlen(input);
+    if (len > 0 && input[len - 1] == '\n') {
+      input[len - 1] = '\0';
     }
 
     // tokenize into separate commands using delimiter ';'
@@ -67,22 +88,28 @@ int main(int argc, char **argv) {
       // printf("cmdargs[0]: %s, cmdargs[1]: %s\n", cmdArgs[0], cmdArgs[1]);
       // fflush(stdout);
 
+      if (cmdArgs[0] == NULL) break;
+
       // Decide what command to run based on first cmd line arg
       if (strcmp(cmdArgs[0], "cd") == 0)
       {
-
+        changeDirectory(cmdArgs[1]);
+      }
+      else if (strcmp(cmdArgs[0], "pwd") == 0)
+      {
+        printWorkingDirectory();
       }
       else if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
       {
         // TO-DO: close all active forked processes
         fflush(stdout);
-	printf("Goodbye!\n");
-        _exit(0);
+	      printf("Goodbye!\n");
+        // _exit(0);
+        return 0;
       }
       else // command not found
       {
-        printf("\ndragonshell: Command not found\n");
-        break;
+        printf("dragonshell: command not found\n");
       }
       i++;
     }
