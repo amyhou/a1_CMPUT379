@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <limits.h>
+#include <stdlib.h>
 
 #define TRUE  (1)
 #define FALSE (0)
@@ -35,12 +36,11 @@ int main(int argc, char **argv) {
   {
     char input[PATH_MAX];
     char * tokArgs[PATH_MAX];
+    
     // print string prompt
     printf("dragonshell > ");
     // get input
-    scanf("%s", &input[0]);
-
-
+    scanf("%[^\n]%*c", &input[0]);
 
     // tokenize into separate commands using delimiter ';'
     tokenize(&input[0], ";", &tokArgs[0]);
@@ -50,18 +50,22 @@ int main(int argc, char **argv) {
     {
       // tokenize into separate commands/arguments using delimiter ' '
       char * cmdArgs[PATH_MAX];
-      printf("tokArgs[i]: %s", tokArgs[i]);
+      printf("tokArgs[i]: %s\n", tokArgs[i]);
+      fflush(stdout);
 
-      tokenize(tokArgs[0], ' ', &cmdArgs[0]);
+      tokenize(tokArgs[i], " ", &cmdArgs[0]);
       
-      printf("%s %s", cmdArgs[0], cmdArgs[1]);
-      if (strcmp(tokArgs[i], "exit") == 0)
+      printf("cmdargs[0]: %s, cmdargs[1]: %s\n", cmdArgs[0], cmdArgs[1]);
+      fflush(stdout);
+      if (strcmp(cmdArgs[0], "exit") == 0)
       {
         prog = FALSE;
         break;
       }
+      break;
       i++;
     }
+    fflush(stdout);
   }
   return 0;
 }
