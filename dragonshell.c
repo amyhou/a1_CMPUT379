@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
   {
     char input[PATH_MAX] = "";
     char * tokArgs[PATH_MAX] = {NULL};
-    
+
     // print string prompt
     printf("dragonshell > ");
     // get input
@@ -59,17 +59,25 @@ int main(int argc, char **argv) {
     {
       // tokenize into separate commands/arguments using delimiter ' '
       char * cmdArgs[PATH_MAX] = {NULL};
-      printf("tokArgs[i]: %s\n", tokArgs[i]);
-      fflush(stdout);
+      // printf("tokArgs[i]: %s\n", tokArgs[i]);
+      // fflush(stdout);
 
       tokenize(tokArgs[i], " ", &cmdArgs[0]);
-      
-      printf("cmdargs[0]: %s, cmdargs[1]: %s\n", cmdArgs[0], cmdArgs[1]);
-      fflush(stdout);
-      if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
+
+      // printf("cmdargs[0]: %s, cmdargs[1]: %s\n", cmdArgs[0], cmdArgs[1]);
+      // fflush(stdout);
+
+      // Decide what command to run based on first cmd line arg
+      if (strcmp(cmdArgs[0], "cd") == 0)
       {
-        prog = FALSE;
-        break;
+
+      }
+      else if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
+      {
+        // close all active processes and exit
+        fflush(stdout);
+        _exit(0);
+        printf("Goodbye!");
       }
       else // command not found
       {
