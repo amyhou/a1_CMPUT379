@@ -74,10 +74,10 @@ int main(int argc, char **argv) {
       }
       else if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
       {
-        // close all active processes and exit
+        // TO-DO: close all active forked processes
         fflush(stdout);
+	printf("Goodbye!\n");
         _exit(0);
-        printf("Goodbye!");
       }
       else // command not found
       {
