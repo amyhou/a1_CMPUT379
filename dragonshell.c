@@ -40,6 +40,20 @@ void printWorkingDirectory() {
   fflush(stdout);
 }
 
+void showPath() {
+  int rc = execve();
+  if (rc == -1)
+  {
+    printf("Could not print $PATH.\n");
+  }
+}
+
+void welcomeMsg() {
+  /* Print welcome message (make fancier later) */
+  printf("Welcome to DragonShell!\n");
+  printf("-------------------------\n");
+}
+
 int main(int argc, char **argv) {
   // print the string prompt without a newline, before beginning to read
   // tokenize the input, run the command(s), and print the result
@@ -47,9 +61,8 @@ int main(int argc, char **argv) {
 
   pid_t pid; //shared child pid
 
-  /* Print welcome message */
-  printf("Welcome to DragonShell!\n");
-  printf("-------------------------\n");
+  /* Welcome message! */
+  welcomeMsg();
 
   while (TRUE)
   {
@@ -90,6 +103,9 @@ int main(int argc, char **argv) {
 
       if (cmdArgs[0] == NULL) break;
 
+      // Decide if should be background process based on last cmd line arg
+      /* TO-DO: */
+      
       // Decide what command to run based on first cmd line arg
       if (strcmp(cmdArgs[0], "cd") == 0)
       {
@@ -99,11 +115,19 @@ int main(int argc, char **argv) {
       {
         printWorkingDirectory();
       }
+      else if (strcmp(cmdArgs[0], "$PATH") == 0) // show $PATH variable
+      {
+        showPath();
+      }
+      else if (strcmp(cmdArgs[0], "a2path") == 0)
+      {
+        
+      }
       else if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
       {
         // TO-DO: close all active forked processes
         fflush(stdout);
-	      printf("Goodbye!\n");
+        printf("Goodbye!\n");
         // _exit(0);
         return 0;
       }
