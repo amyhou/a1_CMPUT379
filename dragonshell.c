@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -8,15 +9,23 @@
 
 #define TRUE  (1)
 #define FALSE (0)
-/**
- * @brief Tokenize a C string
- *
- * @param str - The C string to tokenize
- * @param delim - The C string containing delimiter character(s)
- * @param argv - A char* array that will contain the tokenized strings
- * Make sure that you allocate enough space for the array.
- */
+
+/* Global variables */
+pid_t pid; //shared child pid
+// char * shellPath[PATH_MAX] = {"/bin/", "/usr/bin/"};
+// int shellPathIdx = 2; // next available element's index
+char shellPath[PATH_MAX] = "/bin/:/usr/bin/";
+
+/* -------------------------- FUNCTIONS DEFINITIONS ------------------------ */
 void tokenize(char* str, const char* delim, char ** argv) {
+  /**
+   * @brief Tokenize a C string
+   *
+   * @param str - The C string to tokenize
+   * @param delim - The C string containing delimiter character(s)
+   * @param argv - A char* array that will contain the tokenized strings
+   * Make sure that you allocate enough space for the array.
+   */
   char* token;
   token = strtok(str, delim);
   for(size_t i = 0; token != NULL; ++i){
@@ -27,9 +36,14 @@ void tokenize(char* str, const char* delim, char ** argv) {
 
 void changeDirectory(char * dirPath) {
   int rc;
+  if (dirPath == NULL)
+  {
+    printf("dragonshell: expected argument to \"cd\"\n");
+    return;
+  }
   if ((rc = chdir(dirPath)) != 0)
   {
-    printf("Failed to change directory.");
+    printf("dragonshell: No such file or directory.\n");
     fflush(stdout);
   }
 }
@@ -40,12 +54,64 @@ void printWorkingDirectory() {
   fflush(stdout);
 }
 
+// void getPath(char * path) {
+//   /* Returns character string contained in $PATH variable */
+//   // char path[PATH_MAX] = "";
+//   for (int i = 0; i < shellPathIdx; i++)
+//   {
+//     printf("shellPath[i]: %s\n", shellPath[i]);
+//     strcat(path, shellPath[i]);
+//     if (i != shellPathIdx - 1)
+//     {
+//       strcat(path, ":");
+//     }
+//     printf("%s\n", path);
+//   }
+//   // returnedPath = path;
+// }
+
 void showPath() {
-  int rc = execve();
-  if (rc == -1)
+  /* Prints out $PATH */
+  // char path[PATH_MAX] = "";
+  // getPath(&path[0]);
+  // printf("Current PATH: %s\n", path);
+  printf("Current PATH: %s\n", shellPath);
+}
+
+void addToPath(char * path)
+{
+  /* Adds path param to $PATH variable */
+  int i = 0;
+  char * newPaths[PATH_MAX] = {NULL};
+  tokenize(&path[0], ":", &newPaths[0]);
+  if (strcmp(newPaths[0], "$PATH") != 0)
   {
-    printf("Could not print $PATH.\n");
+    // printf("Clearing $PATH var\n");
+    memset(&shellPath[0], 0, sizeof(shellPath));
+    // shellPathIdx = 0;
+    // shellPath = "";
   }
+  else
+  {
+    strcat(shellPath, ":");
+    i++;
+  }
+  while (newPaths[i] != NULL)
+  {
+    // shellPath[shellPathIdx] = (char *)newPaths[i];
+    // printf("new shellPath[shellPathIdx] = %s\n", shellPath[shellPathIdx]);
+    // shellPathIdx++;
+    strcat(shellPath, newPaths[i]);
+    strcat(shellPath, ":");
+    printf("new shellPath = %s\n", shellPath);
+    i++;
+  }
+  // Get rid of trailing :
+  size_t len = strlen(shellPath);
+  if (len > 0 && shellPath[len - 1] == ':') {
+    shellPath[len - 1] = '\0';
+  }
+
 }
 
 void welcomeMsg() {
@@ -54,12 +120,27 @@ void welcomeMsg() {
   printf("-------------------------\n");
 }
 
+int executeCmd(char ** cmdArgs) {
+  /*Try executing command using any given command line arguments. Look for
+  * program in any of the $PATH directories.
+  * Input:
+  *   cmdArgs:
+  *     cmdArgs[0]: program name
+  *     cmdArgs[1], ... : program arguments
+  * Returns:
+  *   rc - return code is 0 for success, -1 for failure to execute program
+  */
+  char *argv1[] = {NULL}; // change this!
+  printf("cmdArgs[1]: %s\n", cmdArgs[1]);
+  int rc = execve(cmdArgs[0], cmdArgs, argv1);
+
+  return rc;
+}
+
 int main(int argc, char **argv) {
   // print the string prompt without a newline, before beginning to read
   // tokenize the input, run the command(s), and print the result
   // do this in a loop
-
-  pid_t pid; //shared child pid
 
   /* Welcome message! */
   welcomeMsg();
@@ -105,7 +186,7 @@ int main(int argc, char **argv) {
 
       // Decide if should be background process based on last cmd line arg
       /* TO-DO: */
-      
+
       // Decide what command to run based on first cmd line arg
       if (strcmp(cmdArgs[0], "cd") == 0)
       {
@@ -121,7 +202,14 @@ int main(int argc, char **argv) {
       }
       else if (strcmp(cmdArgs[0], "a2path") == 0)
       {
-        
+        if (cmdArgs[2] != NULL)
+        {
+          printf("dragonshell: a2path only supports one command argument.\n");
+        }
+        else
+        {
+          addToPath(cmdArgs[1]);
+        }
       }
       else if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
       {
@@ -133,24 +221,32 @@ int main(int argc, char **argv) {
       }
       else // try to exec
       {
+        /*
+         * First try to exec using path in cmdArgs[0]
+         * Then, fetch all paths in $PATH and try them one by one appended to cmdArgs[0]
+         * IF exec works, break for loop/return from function
+         * If exec fails, continue
+         * If reached end without success, print "command not found"
+         */
+        int rc;
         // char path[PATH_MAX];
         // printf("Enter path of program: ");
         // scanf("%s", &cmdArgs[0]);
         if ((pid = fork()) < 0) perror("fork error!");
         if (pid == 0) {
             // printf("Child\n");
-            char *argv1[] = {NULL}; // change this!
-            printf("cmdArgs[1]: %s\n", cmdArgs[1]);
-            int rc = execve(cmdArgs[0], cmdArgs, argv1);
-            if (rc == -1)
+            if ((rc = executeCmd(cmdArgs)) == -1)
             {
-                perror("dragonshell: command not found\n");
+              // print error message
+              printf("dragonshell: command not found\n");
+              _exit(0);
             }
         }
         else {
-            sleep(1); // should not use sleep!
+            waitpid(pid, &rc, 0); // should not use sleep! we should use wait() for child to return
+            // printf("child pid: %d\n", pid);
             // printf("Parent killing child.\n");
-            kill(pid, SIGKILL);
+            // kill(pid, SIGKILL);
         }
         // printf("dragonshell: command not found\n");
       }
