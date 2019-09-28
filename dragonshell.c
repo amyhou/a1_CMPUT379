@@ -16,6 +16,10 @@
 #include <stdio.h>
 #include <limits.h>
 
+/* Questions:
+  1. Do we need to fflush after each printf statement?
+*/
+
 /* ------------------------------ DEFINE MACROS ---------------------------- */
 #define TRUE  (1)
 #define FALSE (0)
@@ -89,7 +93,7 @@ void addToPath(char * path) {
   {
     strcat(shellPath, newPaths[i]);
     strcat(shellPath, ":");
-    printf("new shellPath = %s\n", shellPath);
+    // printf("new shellPath = %s\n", shellPath);
     i++;
   }
   // Get rid of trailing ":"
