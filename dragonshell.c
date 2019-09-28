@@ -1,3 +1,12 @@
+/***
+ *    ________                                       _________.__           .__  .__
+ *    \______ \____________     ____   ____   ____  /   _____/|  |__   ____ |  | |  |
+ *     |    |  \_  __ \__  \   / ___\ /  _ \ /    \ \_____  \ |  |  \_/ __ \|  | |  |
+ *     |    `   \  | \// __ \_/ /_/  >  <_> )   |  \/        \|   Y  \  ___/|  |_|  |__
+ *    /_______  /__|  (____  /\___  / \____/|___|  /_______  /|___|  /\___  >____/____/
+ *            \/           \//_____/             \/        \/      \/     \/
+ */
+
 #include <stddef.h>
 #include <string.h>
 #include <sys/types.h>
@@ -7,14 +16,16 @@
 #include <stdio.h>
 #include <limits.h>
 
+/* ------------------------------ DEFINE MACROS ---------------------------- */
 #define TRUE  (1)
 #define FALSE (0)
+/* --------------------------- END OF DEFINED MACROS ----------------------- */
 
-/* Global variables */
+/* ----------------------------- GLOBAL VARIABLES -------------------------- */
 pid_t pid; //shared child pid
-// char * shellPath[PATH_MAX] = {"/bin/", "/usr/bin/"};
-// int shellPathIdx = 2; // next available element's index
 char shellPath[PATH_MAX] = "/bin/:/usr/bin/";
+/* ------------------------- END OF GLOBAL VARIABLES ----------------------- */
+
 
 /* -------------------------- FUNCTIONS DEFINITIONS ------------------------ */
 void tokenize(char* str, const char* delim, char ** argv) {
@@ -54,32 +65,12 @@ void printWorkingDirectory() {
   fflush(stdout);
 }
 
-// void getPath(char * path) {
-//   /* Returns character string contained in $PATH variable */
-//   // char path[PATH_MAX] = "";
-//   for (int i = 0; i < shellPathIdx; i++)
-//   {
-//     printf("shellPath[i]: %s\n", shellPath[i]);
-//     strcat(path, shellPath[i]);
-//     if (i != shellPathIdx - 1)
-//     {
-//       strcat(path, ":");
-//     }
-//     printf("%s\n", path);
-//   }
-//   // returnedPath = path;
-// }
-
 void showPath() {
   /* Prints out $PATH */
-  // char path[PATH_MAX] = "";
-  // getPath(&path[0]);
-  // printf("Current PATH: %s\n", path);
   printf("Current PATH: %s\n", shellPath);
 }
 
-void addToPath(char * path)
-{
+void addToPath(char * path) {
   /* Adds path param to $PATH variable */
   int i = 0;
   char * newPaths[PATH_MAX] = {NULL};
@@ -88,8 +79,6 @@ void addToPath(char * path)
   {
     // printf("Clearing $PATH var\n");
     memset(&shellPath[0], 0, sizeof(shellPath));
-    // shellPathIdx = 0;
-    // shellPath = "";
   }
   else
   {
@@ -98,25 +87,21 @@ void addToPath(char * path)
   }
   while (newPaths[i] != NULL)
   {
-    // shellPath[shellPathIdx] = (char *)newPaths[i];
-    // printf("new shellPath[shellPathIdx] = %s\n", shellPath[shellPathIdx]);
-    // shellPathIdx++;
     strcat(shellPath, newPaths[i]);
     strcat(shellPath, ":");
     printf("new shellPath = %s\n", shellPath);
     i++;
   }
-  // Get rid of trailing :
+  // Get rid of trailing ":"
   size_t len = strlen(shellPath);
   if (len > 0 && shellPath[len - 1] == ':') {
     shellPath[len - 1] = '\0';
   }
-
 }
 
 void welcomeMsg() {
   /* Print welcome message (make fancier later) */
-  printf("Welcome to DragonShell!\n");
+  printf("Welcome to Dragonshell!\n");
   printf("-------------------------\n");
 }
 
@@ -130,13 +115,31 @@ int executeCmd(char ** cmdArgs) {
   * Returns:
   *   rc - return code is 0 for success, -1 for failure to execute program
   */
-  char *argv1[] = {NULL}; // change this!
-  printf("cmdArgs[1]: %s\n", cmdArgs[1]);
-  int rc = execve(cmdArgs[0], cmdArgs, argv1);
+  char ** argv1 = cmdArgs;
+  char * envp1[] = {NULL}; // change this!
+  // printf("cmdArgs[1]: %s\n", cmdArgs[1]);
 
+  int rc = execve(cmdArgs[0], argv1, envp1);
+  if (rc == -1)
+  {
+    char * paths[PATH_MAX] = {NULL};
+    tokenize(&shellPath[0], ":", &paths[0]);
+    int j = 0;
+    while (paths[j] != NULL)
+    {
+      // printf("Try to execute from paths[j]: %s\n", paths[j]);
+      char tmp[PATH_MAX];
+      strcpy(tmp, paths[j]);
+      rc = execve(strcat(tmp, cmdArgs[0]), argv1, envp1);
+      j++;
+    }
+  }
   return rc;
 }
+/* ------------------------ END OF FUNCTION DEFINITIONS -------------------- */
 
+
+/* ------------------------------ MAIN PROGRAM ----------------------------- */
 int main(int argc, char **argv) {
   // print the string prompt without a newline, before beginning to read
   // tokenize the input, run the command(s), and print the result
@@ -221,34 +224,25 @@ int main(int argc, char **argv) {
       }
       else // try to exec
       {
-        /*
-         * First try to exec using path in cmdArgs[0]
-         * Then, fetch all paths in $PATH and try them one by one appended to cmdArgs[0]
-         * IF exec works, break for loop/return from function
-         * If exec fails, continue
-         * If reached end without success, print "command not found"
-         */
         int rc;
-        // char path[PATH_MAX];
-        // printf("Enter path of program: ");
-        // scanf("%s", &cmdArgs[0]);
         if ((pid = fork()) < 0) perror("fork error!");
-        if (pid == 0) {
-            // printf("Child\n");
-            if ((rc = executeCmd(cmdArgs)) == -1)
-            {
-              // print error message
-              printf("dragonshell: command not found\n");
-              _exit(0);
-            }
+        if (pid == 0)
+        {
+          // printf("Child\n");
+          if ((rc = executeCmd(cmdArgs)) == -1)
+          {
+            // print error message
+            printf("dragonshell: command not found\n");
+            _exit(0);
+          }
         }
-        else {
-            waitpid(pid, &rc, 0); // should not use sleep! we should use wait() for child to return
-            // printf("child pid: %d\n", pid);
-            // printf("Parent killing child.\n");
-            // kill(pid, SIGKILL);
+        else
+        {
+          waitpid(pid, &rc, 0); // should not use sleep! we should use wait() for child to return
+          // printf("child pid: %d\n", pid);
+          // printf("Parent killing child.\n");
+          // kill(pid, SIGKILL);
         }
-        // printf("dragonshell: command not found\n");
       }
       i++;
     }
@@ -256,3 +250,4 @@ int main(int argc, char **argv) {
   }
   return 0;
 }
+/* ------------------------ END OF MAIN FUNCTION -------------------------- */
