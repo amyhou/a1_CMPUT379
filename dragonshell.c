@@ -78,6 +78,12 @@ void addToPath(char * path) {
   /* Adds path param to $PATH variable */
   int i = 0;
   char * newPaths[PATH_MAX] = {NULL};
+
+  if (path == NULL) // set path to empty string
+  {
+    memset(&shellPath[0], 0, sizeof(shellPath));
+    return;
+  }
   tokenize(&path[0], ":", &newPaths[0]);
   if (strcmp(newPaths[0], "$PATH") != 0)
   {
@@ -86,7 +92,10 @@ void addToPath(char * path) {
   }
   else
   {
-    strcat(shellPath, ":");
+    if (strlen(shellPath) > 0) // if path is not empty str, append preparatory ':'
+    {
+      strcat(shellPath, ":");
+    }
     i++;
   }
   while (newPaths[i] != NULL)
@@ -105,9 +114,17 @@ void addToPath(char * path) {
 
 void welcomeMsg() {
   /* Print welcome message (make fancier later) */
-  printf("Welcome to Dragonshell!\n");
+  // printf("Welcome to Dragonshell!\n");
   printf("\n");
-  printf("-------------------------\n");
+  printf("--------------------------------------------------------------------------------\n\n");
+  printf("________                                       ________.__           .__  .__\n");
+  printf("\\______ \\____________     ____   ____   ____  /   ____/|  |__   ____ |  | |  |\n");
+  printf(" |    |  \\_  __ \\__  \\   / ___\\ /  _ \\ /    \\ \\____  \\ |  |  \\_/ __ \\|  | |  |\n");
+  printf(" |    `   \\  | \\// __ \\_/ /_/  >  <_> )   |  \\/       \\|   Y  \\  ___/|  |_|  |__\n");
+  printf("/_______  /__|  (____  /\\___  / \\____/|___|  /______  /|___|  /\\___  >____/____/\n");
+  printf("        \\/           \\//_____/             \\/       \\/      \\/     \\/\n");
+  printf("                               Programmed by Amy Hou\n\n");
+  printf("--------------------------------------------------------------------------------\n\n");
 }
 
 int executeCmd(char ** cmdArgs) {
@@ -300,6 +317,7 @@ int main(int argc, char **argv) {
           // TO-DO: close all active forked processes
           fflush(stdout);
           printf("Goodbye!\n");
+          // Make sure all running process and background processed killed...
           if (kill(pid, SIGKILL) == 0)
           {
             printf("Killed process %d\n", pid);
