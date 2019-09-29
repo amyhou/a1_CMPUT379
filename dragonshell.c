@@ -11,6 +11,8 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+// #include <sys/stat.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -93,7 +95,7 @@ void addToPath(char * path) {
   {
     strcat(shellPath, newPaths[i]);
     strcat(shellPath, ":");
-    // printf("new shellPath = %s\n", shellPath);
+    printf("new shellPath = %s\n", shellPath);
     i++;
   }
   // Get rid of trailing ":"
@@ -156,6 +158,11 @@ int main(int argc, char **argv) {
   {
     char input[PATH_MAX] = "";
     char * tokArgs[PATH_MAX] = {NULL};
+    int i = 0;
+    int fd = -1;
+    int redirOutputFlag = FALSE;
+    pid_t pid;
+    int status;
 
     // print string prompt
     printf("dragonshell > ");
@@ -176,82 +183,145 @@ int main(int argc, char **argv) {
     // tokenize into separate commands using delimiter ';'
     tokenize(&input[0], ";", &tokArgs[0]);
 
-    int i = 0;
     while (tokArgs[i] != NULL)
     {
-      // tokenize into separate commands/arguments using delimiter ' '
-      char * cmdArgs[PATH_MAX] = {NULL};
-      // printf("tokArgs[i]: %s\n", tokArgs[i]);
-      // fflush(stdout);
 
-      tokenize(tokArgs[i], " ", &cmdArgs[0]);
+        // printf("tokArgs[i]: %s\n", tokArgs[i]);
+        // // fflush(stdout);
+        // // tokenize into input cmd and output file using delimiter '>'
+        // char * inOutToks[PATH_MAX] = {NULL};
+        // char tmp[PATH_MAX] = "";
+        // strcpy(tmp, tokArgs[i]);
+        // tokenize(&tmp[0], ">", &inOutToks[0]);
+        // printf("inOutToks[0]: %s, inOutToks[1]: %s\n", inOutToks[0], inOutToks[1]);
+        //
+        // if (inOutToks[1] != NULL)
+        // {
+        //   // Output file was supplied, write stdout to specified filename
+        //   redirOutputFlag = TRUE;
+        //   // Open
+        //   fd = open(inOutToks[1], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        //   if (fd == -1) {
+        //     printf("dragonshell: Could not open file.\n");
+        //     // _exit(1);
+        //     continue;
+        //   }
+        //   // Use dup2 to use opened file fd and STDOUT fd interchangeably
+        //   if (dup2(fd, STDOUT_FILENO) == -1) {
+        //     printf("dragonshell: Could not create file descriptor copy.\n");
+        //     close(fd);
+        //     // _exit(1);
+        //     continue;
+        //   }
+        //
+        // }
 
-      // printf("cmdargs[0]: %s, cmdargs[1]: %s\n", cmdArgs[0], cmdArgs[1]);
-      // fflush(stdout);
+        // tokenize into separate commands/arguments using delimiter ' '
+        char * cmdArgs[PATH_MAX] = {NULL};
 
-      if (cmdArgs[0] == NULL) break;
+        // if (redirOutputFlag == TRUE)
+        // {
+        //   tokenize(inOutToks[0], " ", &cmdArgs[0]);
+        // }
+        // else
+        // {
+          tokenize(tokArgs[i], " ", &cmdArgs[0]);
+        // }
 
-      // Decide if should be background process based on last cmd line arg
-      /* TO-DO: */
+        printf("cmdargs[0]: %s, cmdargs[1]: %s\n", cmdArgs[0], cmdArgs[1]);
+        // fflush(stdout);
 
-      // Decide what command to run based on first cmd line arg
-      if (strcmp(cmdArgs[0], "cd") == 0)
-      {
-        changeDirectory(cmdArgs[1]);
-      }
-      else if (strcmp(cmdArgs[0], "pwd") == 0)
-      {
-        printWorkingDirectory();
-      }
-      else if (strcmp(cmdArgs[0], "$PATH") == 0) // show $PATH variable
-      {
-        showPath();
-      }
-      else if (strcmp(cmdArgs[0], "a2path") == 0)
-      {
-        if (cmdArgs[2] != NULL)
+        if (cmdArgs[0] == NULL) break;
+
+        // Decide if should be background process based on last cmd line arg
+        /* TO-DO: */
+
+        // Decide what command to run based on first cmd line arg
+        if (strcmp(cmdArgs[0], "cd") == 0)
         {
-          printf("dragonshell: a2path only supports one command argument.\n");
+          changeDirectory(cmdArgs[1]);
+          continue;
         }
-        else
+        else if (strcmp(cmdArgs[0], "pwd") == 0)
         {
-          addToPath(cmdArgs[1]);
+          printWorkingDirectory();
+          continue;
         }
-      }
-      else if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
-      {
-        // TO-DO: close all active forked processes
-        fflush(stdout);
-        printf("Goodbye!\n");
-        // _exit(0);
-        return 0;
-      }
-      else // try to exec
-      {
-        int rc;
-        if ((pid = fork()) < 0) perror("fork error!");
+        else if (strcmp(cmdArgs[0], "$PATH") == 0) // show $PATH variable
+        {
+          showPath();
+          continue;
+        }
+        else if (strcmp(cmdArgs[0], "a2path") == 0)
+        {
+          if (cmdArgs[2] != NULL)
+          {
+            printf("dragonshell: a2path only supports one command argument.\n");
+          }
+          else
+          {
+            addToPath(cmdArgs[1]);
+          }
+          continue;
+        }
+
+        if ((pid = fork()) < 0)
+        {
+          perror("fork error!");
+        }
         if (pid == 0)
         {
-          // printf("Child\n");
-          if ((rc = executeCmd(cmdArgs)) == -1)
-          {
-            // print error message
-            printf("dragonshell: command not found\n");
-            _exit(0);
+        if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
+        {
+          // TO-DO: close all active forked processes
+          fflush(stdout);
+          printf("Goodbye!\n");
+          // _exit(0);
+          _exit(0);
+        }
+        else // try to exec
+        {
+          int rc;
+          // if ((pid = fork()) < 0) perror("fork error!");
+          // if (pid == 0)
+          // {
+            // printf("Child\n");
+            if ((rc = executeCmd(cmdArgs)) == -1)
+            {
+              // print error message
+              printf("dragonshell: command not found\n");
+              _exit(0);
+            }
+          // }
+          // else
+          // {
+          //   waitpid(pid, &rc, 0); // should not use sleep! we should use wait() for child to return
+            // printf("child pid: %d\n", pid);
+            // printf("Parent killing child.\n");
+            // kill(pid, SIGKILL);
           }
+          _exit(0);
         }
         else
         {
-          waitpid(pid, &rc, 0); // should not use sleep! we should use wait() for child to return
-          // printf("child pid: %d\n", pid);
-          // printf("Parent killing child.\n");
-          // kill(pid, SIGKILL);
+          waitpid(pid, &status, 0);
         }
+
+        fflush(stdout);
+        if (redirOutputFlag == TRUE)
+        {
+          if (close(fd) == -1)
+          {
+            printf("dragonshell: Error closing file.\n");
+            _exit(1);
+          }
+        }
+
+        i++; // increment command counter
       }
-      i++;
+
     }
-    fflush(stdout);
-  }
+
   return 0;
 }
 /* ------------------------ END OF MAIN FUNCTION -------------------------- */
