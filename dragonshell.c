@@ -29,9 +29,8 @@
 
 /* ----------------------------- GLOBAL VARIABLES -------------------------- */
 pid_t pid; //shared child pid
-char shellPath[PATH_MAX] = "/bin/:/usr/bin/";
+char shellPath[PATH_MAX] = "/bin/:/usr/bin/"; //default path
 /* ------------------------- END OF GLOBAL VARIABLES ----------------------- */
-
 
 /* -------------------------- FUNCTIONS DEFINITIONS ------------------------ */
 void tokenize(char* str, const char* delim, char ** argv) {
@@ -95,7 +94,7 @@ void addToPath(char * path) {
   {
     strcat(shellPath, newPaths[i]);
     strcat(shellPath, ":");
-    printf("new shellPath = %s\n", shellPath);
+    // printf("new shellPath = %s\n", shellPath);
     i++;
   }
   // Get rid of trailing ":"
@@ -159,10 +158,9 @@ int main(int argc, char **argv) {
     char input[PATH_MAX] = "";
     char * tokArgs[PATH_MAX] = {NULL};
     int i = 0;
-    int fd;
+    int fd, status;
     int redirOutputFlag = FALSE;
     pid_t pid;
-    int status;
 
     // print string prompt
     printf("dragonshell > ");
@@ -176,7 +174,8 @@ int main(int argc, char **argv) {
 
     // get rid of newline character at end
     size_t len = strlen(input);
-    if (len > 0 && input[len - 1] == '\n') {
+    if (len > 0 && input[len - 1] == '\n')
+    {
       input[len - 1] = '\0';
     }
 
@@ -193,8 +192,6 @@ int main(int argc, char **argv) {
       }
       if (pid == 0)
       {
-        // printf("tokArgs[i]: %s\n", tokArgs[i]);
-        // fflush(stdout);
         // tokenize into input cmd and output file using delimiter '>'
         char * inOutToks[PATH_MAX] = {NULL};
         tokenize(tokArgs[i], ">", &inOutToks[0]);
@@ -203,8 +200,12 @@ int main(int argc, char **argv) {
         {
           // Output file was supplied, write stdout to specified filename
           redirOutputFlag = TRUE;
+
+          // Get filename
+          char * filename = strtok(inOutToks[1], " ");
+
           // Open
-          fd = open(inOutToks[1], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+          fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
           if (fd == -1) {
             printf("dragonshell: Could not open file.\n");
             _exit(1);
@@ -227,33 +228,8 @@ int main(int argc, char **argv) {
         // fflush(stdout);
 
         if (cmdArgs[0] == NULL) break;
-
         // Decide if should be background process based on last cmd line arg
         /* TO-DO: */
-
-
-        if ((strcmp(cmdArgs[0], "cd") != 0) &&
-        (strcmp(cmdArgs[0], "pwd") != 0) &&
-        (strcmp(cmdArgs[0], "$PATH") != 0) &&
-        (strcmp(cmdArgs[0], "a2path") != 0) &&
-        (strcmp(cmdArgs[0], "exit") != 0)) // try to exec
-        {
-          int rc;
-          if ((rc = executeCmd(cmdArgs)) == -1)
-          {
-            // print error message
-            printf("dragonshell: command not found\n");
-            _exit(0);
-          }
-        }
-        _exit(0);
-      }
-      else
-      {
-        // if not BG process, wait for process to complete before returning to prompt
-        waitpid(pid, &status, 0);
-        tokenize(tokArgs[i], " ", &cmdArgs[0]);
-        // Decide what command to run based on first cmd line arg
         if (strcmp(cmdArgs[0], "cd") == 0)
         {
           changeDirectory(cmdArgs[1]);
@@ -277,6 +253,20 @@ int main(int argc, char **argv) {
             addToPath(cmdArgs[1]);
           }
         }
+        else if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
+        {
+          fflush(stdout);
+          _exit(0);
+        }
+        else
+        {
+          int rc;
+          if ((rc = executeCmd(cmdArgs)) == -1)
+          {
+            // print error message
+            printf("dragonshell: command not found\n");
+          }
+        }
         fflush(stdout);
         if (redirOutputFlag == TRUE)
         {
@@ -286,6 +276,36 @@ int main(int argc, char **argv) {
             // _exit(1);
           }
         }
+        _exit(0);
+      }
+      else
+      {
+        // if not BG process, wait for process to complete before returning to prompt
+        waitpid(pid, &status, 0);
+
+        // need to retokenize since child process' local variables no longer accessible
+        tokenize(tokArgs[i], " ", &cmdArgs[0]);
+
+        // Decide what command to run based on first cmd line arg
+        if (strcmp(cmdArgs[0], "cd") == 0)
+        {
+          printf("changing directory from parent\n");
+          changeDirectory(cmdArgs[1]);
+        }
+        else if (strcmp(cmdArgs[0], "a2path") == 0)
+        {
+          if ((cmdArgs[2] != NULL) && (strcmp(cmdArgs[2], ">") != 0))
+          {
+            printf("dragonshell: a2path only supports one command argument.\n");
+          }
+          else
+          {
+            addToPath(cmdArgs[1]);
+          }
+        }
+
+        fflush(stdout);
+
         if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
         {
           // TO-DO: close all active forked processes
