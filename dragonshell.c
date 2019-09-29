@@ -11,7 +11,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-// #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
@@ -107,6 +106,7 @@ void addToPath(char * path) {
 void welcomeMsg() {
   /* Print welcome message (make fancier later) */
   printf("Welcome to Dragonshell!\n");
+  printf("\n");
   printf("-------------------------\n");
 }
 
@@ -146,13 +146,8 @@ int executeCmd(char ** cmdArgs) {
 
 /* ------------------------------ MAIN PROGRAM ----------------------------- */
 int main(int argc, char **argv) {
-  // print the string prompt without a newline, before beginning to read
-  // tokenize the input, run the command(s), and print the result
-  // do this in a loop
-
   /* Welcome message! */
   welcomeMsg();
-
   while (TRUE)
   {
     char input[PATH_MAX] = "";
@@ -216,16 +211,10 @@ int main(int argc, char **argv) {
             close(fd);
             _exit(1);
           }
-
         }
 
         // tokenize into separate commands/arguments using delimiter ' '
-
-
         tokenize(inOutToks[0], " ", &cmdArgs[0]);
-
-        // printf("cmdargs[0]: %s, cmdargs[1]: %s\n", cmdArgs[0], cmdArgs[1]);
-        // fflush(stdout);
 
         if (cmdArgs[0] == NULL) break;
         // Decide if should be background process based on last cmd line arg
@@ -317,7 +306,6 @@ int main(int argc, char **argv) {
           }
           _exit(0);
         }
-
       }
     i++; // increment command counter
     }
