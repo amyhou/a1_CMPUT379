@@ -1,10 +1,10 @@
 /***
  *    ________                                       _________.__           .__  .__
- *    \______ \____________     ____   ____   ____  /   _____/|  |__   ____ |  | |  |
- *     |    |  \_  __ \__  \   / ___\ /  _ \ /    \ \_____  \ |  |  \_/ __ \|  | |  |
- *     |    `   \  | \// __ \_/ /_/  >  <_> )   |  \/        \|   Y  \  ___/|  |_|  |__
- *    /_______  /__|  (____  /\___  / \____/|___|  /_______  /|___|  /\___  >____/____/
- *            \/           \//_____/             \/        \/      \/     \/
+ *    \______ \____________     ____   ____   ____  /   ____/|  |__   ____ |  | |  |
+ *     |    |  \_  __ \__  \   / ___\ /  _ \ /    \ \____  \ |  |  \_/ __ \|  | |  |
+ *     |    `   \  | \// __ \_/ /_/  >  <_> )   |  \/       \|   Y  \  ___/|  |_|  |__
+ *    /_______  /__|  (____  /\___  / \____/|___|  /_____  /|___|  /\___  >____/____/
+ *            \/           \//_____/             \/      \/      \/     \/
  */
 
 #include <stddef.h>
@@ -21,29 +21,32 @@
   1. Do we need to fflush after each printf statement?
 */
 
+/*
+  1. Send process to BG.
+  2. Exit needs to kill all running processes.
+*/
+
 /* ------------------------------ DEFINE MACROS ---------------------------- */
 #define TRUE  (1)
 #define FALSE (0)
 /* --------------------------- END OF DEFINED MACROS ----------------------- */
 
 /* ----------------------------- GLOBAL VARIABLES -------------------------- */
-// pid_t pid; //shared child pid
 char shellPath[PATH_MAX] = "/bin/:/usr/bin/"; //default path
 /* ------------------------- END OF GLOBAL VARIABLES ----------------------- */
 
 /* -------------------------- FUNCTIONS DEFINITIONS ------------------------ */
 void welcomeMsg() {
   /* Print welcome message (make fancier later) */
-  printf("Welcome to Dragonshell!\n");
-  // printf("\n");
-  // printf("--------------------------------------------------------------------------------\n\n");
-  // printf("________                                       ________.__           .__  .__\n");
-  // printf("\\______ \\____________     ____   ____   ____  /   ____/|  |__   ____ |  | |  |\n");
-  // printf(" |    |  \\_  __ \\__  \\   / ___\\ /  _ \\ /    \\ \\____  \\ |  |  \\_/ __ \\|  | |  |\n");
-  // printf(" |    `   \\  | \\// __ \\_/ /_/  >  <_> )   |  \\/       \\|   Y  \\  ___/|  |_|  |__\n");
-  // printf("/_______  /__|  (____  /\\___  / \\____/|___|  /______  /|___|  /\\___  >____/____/\n");
-  // printf("        \\/           \\//_____/             \\/       \\/      \\/     \\/\n");
-  // printf("                               Programmed by Amy Hou\n\n");
+  printf("\n");
+  printf("--------------------------------------------------------------------------------\n\n");
+  printf("________                                       ________.__           .__  .__\n");
+  printf("\\______ \\____________     ____   ____   ____  /   ____/|  |__   ____ |  | |  |\n");
+  printf(" |    |  \\_  __ \\__  \\   / ___\\ /  _ \\ /    \\ \\____  \\ |  |  \\_/ __ \\|  | |  |\n");
+  printf(" |    `   \\  | \\// __ \\_/ /_/  >  <_> )   |  \\/       \\|   Y  \\  ___/|  |_|  |__\n");
+  printf("/_______  /__|  (____  /\\___  / \\____/|___|  /______  /|___|  /\\___  >____/____/\n");
+  printf("        \\/           \\//_____/             \\/       \\/      \\/     \\/\n");
+  printf("                               Programmed by Amy Hou\n\n");
   printf("--------------------------------------------------------------------------------\n\n");
 }
 
@@ -176,6 +179,7 @@ int executeCmd(char ** cmdArgs) {
       // printf("Try to execute from paths[j]: %s\n", paths[j]);
       char tmp[PATH_MAX];
       strcpy(tmp, paths[j]);
+      strcat(tmp, "/");
       rc = execve(strcat(tmp, cmdArgs[0]), argv1, envp1);
       j++;
     }
@@ -213,9 +217,7 @@ int basicCmds(char ** cmdArgs) {
   }
   return -1;
 }
-
 /* ------------------------ END OF FUNCTION DEFINITIONS -------------------- */
-
 
 /* ------------------------------ MAIN PROGRAM ----------------------------- */
 int main(int argc, char **argv) {
@@ -388,7 +390,6 @@ int main(int argc, char **argv) {
         while (cmdArgs[k] != NULL)
         {
           removeQuotes(cmdArgs[k]);
-          // printf("removed quotes, remains: %s\n", cmdArgs[k]);
           k++;
         }
 
@@ -425,7 +426,7 @@ int main(int argc, char **argv) {
           _exit(0);
         }
       }
-    i++; // increment command counter
+    i++; // increment semicolon-separated commands counter
     }
   }
   return 0;
