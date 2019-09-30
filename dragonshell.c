@@ -24,7 +24,8 @@
 
 /*
   1. Send process to BG.
-  2. Exit needs to kill all running processes.
+  2. Handling signals
+  3. Exit needs to kill all running processes.
 */
 
 /* ------------------------------ DEFINE MACROS ---------------------------- */
