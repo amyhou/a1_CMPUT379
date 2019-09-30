@@ -234,6 +234,7 @@ int main(int argc, char **argv) {
     int redirOutputFlag = FALSE;
     pid_t pid;
     int pipeFd[2];
+    int bgProcessFlag = FALSE;
 
     // print string prompt
     printf("dragonshell > ");
@@ -250,6 +251,28 @@ int main(int argc, char **argv) {
     if (len > 0 && input[len - 1] == '\n')
     {
       input[len - 1] = '\0';
+    }
+    
+    // Check for bg process
+    for (int i = len-1; i >=0; i--)
+    {
+      printf("input[i]: %c\n", input[i]);
+      if ((input[i] == ' ') || (input[i]=='\t') || (input[i]=='\0') || (input[i]=='\n'))
+      {
+        printf("space or tab encountered\n");
+        continue;
+      }
+      else if (input[i] == '&')
+      {
+        bgProcessFlag = TRUE;
+        input[i] = '\0';
+        printf("bgprocessflag set to true\n");
+        break;
+      }
+      else
+      {
+        break;
+      }
     }
 
     // tokenize into separate commands using delimiter ';'
@@ -290,6 +313,11 @@ int main(int argc, char **argv) {
             _exit(1);
           }
         }
+        
+//        if (bgProcessFlag == TRUE)
+//        {
+//          close(STDOUT_FILENO); // add error check
+//        }
 
         // tokenize into pipe sections using delimiter '|'
         char * pipeCmds[PATH_MAX] = {NULL};
@@ -303,7 +331,7 @@ int main(int argc, char **argv) {
             _exit(1);
           }
 
-          int rwIdx, cStatus; // read or write end of pipe
+          int rwIdx; // read or write end of pipe
 
           pid_t cid;
           if ((cid = fork()) < 0) {
@@ -381,18 +409,31 @@ int main(int argc, char **argv) {
       }
       else
       {
-        // if not BG process, wait for process to complete before returning to prompt
-        waitpid(pid, &status, 0);
 
         // need to retokenize since child process' local variables no longer accessible
         tokenize(tokArgs[i], " ", &cmdArgs[0]);
-
+                
         // again, get rid of quotation marks around commands/arguments so they can be properly exec'd
         int k = 0;
         while (cmdArgs[k] != NULL)
         {
           removeQuotes(cmdArgs[k]);
           k++;
+        }
+        
+        printf("Parent: bgprocessflag is %d\n", bgProcessFlag);
+        
+        // if not BG process, wait for process to complete before returning to prompt
+        if (bgProcessFlag == FALSE)
+        {
+        
+          waitpid(pid, &status, 0);
+        }
+        else
+        {
+          printf("pid: %d\n", getpid());
+//          wait(&status);
+          break;
         }
 
         // Decide what command to run based on first cmd line arg
@@ -417,14 +458,15 @@ int main(int argc, char **argv) {
 
         if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
         {
-          // TO-DO: close all active forked processes
+          // TO-DO: close all active forked processes, might need to move up to _exit to a new exitProg function
           fflush(stdout);
-          printf("Goodbye!\n");
+    
           // Make sure all running process and background processed killed...
-          if (kill(pid, SIGKILL) == 0)
+          if (kill(getpid(), SIGKILL) == 0)
           {
             printf("Killed process %d\n", pid);
           }
+          printf("Goodbye!\n");
           _exit(0);
         }
       }
