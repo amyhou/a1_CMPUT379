@@ -312,16 +312,16 @@ int main(int argc, char **argv) {
           }
           if (cid > 0)
           {
-            // Child proceeds
-            rwIdx = 1; // child reads
+            // parent proceeds
+            rwIdx = 1; // parent reads
             close(pipeFd[1]); // close write end
             dup2(pipeFd[0], STDIN_FILENO);
             close(pipeFd[0]);
           }
           else if (cid == 0)
           {
-            // Parent proceeds
-            rwIdx = 0; //parent writes
+            // child proceeds
+            rwIdx = 0; //child writes
             close(pipeFd[0]); // close read end
             dup2(pipeFd[1], STDOUT_FILENO);
             close(pipeFd[1]);
