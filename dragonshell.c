@@ -20,12 +20,13 @@
 
 /* Questions:
   1. Do we need to fflush after each printf statement?
+  2. Should output be suppressed on exit? ("Killed")
 */
 
 /*
-  1. Send process to BG.
+  1. Suppress output when sent process in BG
   2. Handling signals
-  3. Exit needs to kill all running processes.
+  3. Exit needs to kill all running processes
 */
 
 /* ------------------------------ DEFINE MACROS ---------------------------- */
@@ -462,11 +463,12 @@ int main(int argc, char **argv) {
           fflush(stdout);
     
           // Make sure all running process and background processed killed...
-          if (kill(getpid(), SIGKILL) == 0)
-          {
-            printf("Killed process %d\n", pid);
-          }
           printf("Goodbye!\n");
+          if (kill(0, SIGKILL) != 0)
+          {
+            printf("dragonshell: Problem with killing process.\n");
+          }
+          
           _exit(0);
         }
       }
