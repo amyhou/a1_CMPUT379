@@ -42,6 +42,8 @@
 
 /* ----------------------------- GLOBAL VARIABLES -------------------------- */
 char shellPath[PATH_MAX] = "/bin/:/usr/bin/"; //default path
+pid_t pid;
+pid_t ppid; //main parent pid
 /* ------------------------- END OF GLOBAL VARIABLES ----------------------- */
 
 /* -------------------------- FUNCTIONS DEFINITIONS ------------------------ */
@@ -98,7 +100,12 @@ void removeQuotes(char * str) {
 void signalCallbackHandler(int signum)
 { 
   printf("Caught signal with signum %d\n", signum);
-  return;
+  printf("check sig pid: %d\n", pid);
+  if (ppid != pid)
+  {
+    kill(pid, SIGTSTP);
+  }
+  
 }
 
 void changeDirectory(char * dirPath) {
@@ -236,10 +243,15 @@ int executeCmd(char ** cmdArgs) {
 
 void exitProg() {
   printf("Farewell...\n");
-  if (kill(0, SIGKILL) != 0)
-  {
-    printf("dragonshell: Problem with killing process.\n");
-  }
+  printf("%d\n", ppid);
+//  if (pid == 0)
+//  {
+  killpg(ppid, SIGTERM);
+//  }
+//  else {
+//    _exit(0);
+//  }
+//  kill(0, SIGKILL);
 }
 
 /* ------------------------ END OF FUNCTION DEFINITIONS -------------------- */
@@ -248,14 +260,21 @@ void exitProg() {
 int main(int argc, char **argv) {
   /* Welcome message! */
   welcomeMsg();
+  ppid = getpid();
+  pid = getpid();
   
   /* Set up signal handling */
-  struct sigaction dragonshell_sa;
-  dragonshell_sa.sa_flags = 0;
-  sigemptyset(&dragonshell_sa.sa_mask);
-  dragonshell_sa.sa_handler = signalCallbackHandler;
-//  sigaction(SIGINT, &dragonshell_sa, NULL);
-//  sigaction(SIGTSTP, &dragonshell_sa, NULL);
+  struct sigaction sa;
+  sa.sa_flags = 0;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_handler = exitProg;
+//  sigaction(SIGINT, &sa, NULL);
+  
+  struct sigaction sa2;
+  sa2.sa_flags = 0;
+  sigemptyset(&sa2.sa_mask);
+  sa2.sa_handler = signalCallbackHandler;
+//  sigaction(SIGTSTP, &sa2, NULL);
   
   while (TRUE)
   {
@@ -264,9 +283,10 @@ int main(int argc, char **argv) {
     int i = 0;
     int fd, fd2, status;
     int redirOutputFlag = FALSE;
-    pid_t pid;
+//    pid_t pid;
     int pipeFd[2];
     int bgProcessFlag = FALSE;
+//    pid = getpid();
 
     // print string prompt
     printf("dragonshell > ");
@@ -343,22 +363,6 @@ int main(int argc, char **argv) {
           _exit(1);
         }
       } 
-      
-//      if (bgProcessFlag == TRUE)
-//      {
-//        pid = fork();
-//        
-//        if (pid == 0)
-//        { 
-//          close(STDOUT_FILENO);
-//          close(STDERR_FILENO);
-//        }
-//        else
-//        {
-//         
-//          break;
-//        }
-//      }
 
         // tokenize into pipe sections using delimiter '|'
       char * pipeCmds[PATH_MAX] = {NULL};
@@ -431,7 +435,7 @@ int main(int argc, char **argv) {
         pid = fork();
         if (pid == 0)
         {
-        printWorkingDirectory();
+          printWorkingDirectory();
         } else {
           waitpid(pid, &status, 0);
         }
@@ -462,12 +466,27 @@ int main(int argc, char **argv) {
       {
         int rc;
         pid = fork();
+        
         if (pid == 0)
         {
           if (bgProcessFlag == TRUE)
           {
             close(STDOUT_FILENO);
             close(STDERR_FILENO);
+//            pid = fork();
+//            if (pid == 0)
+//            {
+              
+//              printf("pid %d\n", pid);
+//              _exit(0);
+//            }
+//            else
+//            {
+//              waitpid(pid, &status, 0);
+//              printf("pid %d\n", pid);
+//            }
+            setpgid(pid, ppid);
+            printf("pgid: %d\n", getpgid(pid));
           }
           if ((rc = executeCmd(cmdArgs)) == -1)
           {
@@ -475,11 +494,14 @@ int main(int argc, char **argv) {
             printf("dragonshell: command not found\n");
             _exit(0);
           }
-          
+//          _exit(0);
         } else {
           if (bgProcessFlag == FALSE)
           {
             waitpid(pid, &status, 0);
+          } else
+          {
+            printf("Process %d was created\n", pid);
           }
         }
         
