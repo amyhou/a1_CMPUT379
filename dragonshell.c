@@ -24,12 +24,11 @@
   2. Should output be suppressed on exit (use kill() in exit func?)? ("Killed")
   3. Should we do anything when ^C ^Z received??? --> should send to child processes
   4. Can we use limits.h
-  5. Why do I have zombie processes?
   6. For CTRL D, check if input is equal to null terminator, exit if so
 */
 
 /*
-  1. Suppress output when sent process in BG
+  1. redirection needs to work
   2. Handling signals
   3. Exit needs to kill all running processes
 */
@@ -44,6 +43,7 @@
 char shellPath[PATH_MAX] = "/bin/:/usr/bin/"; //default path
 pid_t pid;
 pid_t ppid; //main parent pid
+pid_t bgpid; //background process (up to one) pid
 /* ------------------------- END OF GLOBAL VARIABLES ----------------------- */
 
 /* -------------------------- FUNCTIONS DEFINITIONS ------------------------ */
@@ -99,11 +99,16 @@ void removeQuotes(char * str) {
 /* Signal Handling */
 void signalCallbackHandler(int signum)
 { 
-  printf("Caught signal with signum %d\n", signum);
-  printf("check sig pid: %d\n", pid);
-  if (ppid != pid)
+//  printf("Caught signal with signum %d\n", signum);
+//  printf("check sig getpid: %d\n", getpid());
+//  printf("saved pid: %d\n", pid);
+//  printf("saved bgpid: %d\n", bgpid);
+//  printf("check ppid: %d\n", ppid);
+  printf("Caught signal with int value %d\n", signum);
+  if (ppid != bgpid)
   {
-    kill(pid, SIGTSTP);
+//    printf("kill bg process");
+    kill(bgpid, SIGKILL);
   }
   
 }
@@ -260,21 +265,25 @@ void exitProg() {
 int main(int argc, char **argv) {
   /* Welcome message! */
   welcomeMsg();
-  ppid = getpid();
-  pid = getpid();
+ 
+  ppid = getpid(); // initial parent process pid
+  bgpid = ppid;  // initial bg process pid placeholder value
   
-  /* Set up signal handling */
-  struct sigaction sa;
-  sa.sa_flags = 0;
-  sigemptyset(&sa.sa_mask);
-  sa.sa_handler = exitProg;
+//  /* Set up signal handling */
+//  struct sigaction sa;
+//  sa.sa_flags = 0;
+//  sigemptyset(&sa.sa_mask);
+//  sa.sa_handler = exitProg;
 //  sigaction(SIGINT, &sa, NULL);
-  
-  struct sigaction sa2;
-  sa2.sa_flags = 0;
-  sigemptyset(&sa2.sa_mask);
-  sa2.sa_handler = signalCallbackHandler;
+//  
+//  struct sigaction sa2;
+//  sa2.sa_flags = 0;
+//  sigemptyset(&sa2.sa_mask);
+//  sa2.sa_handler = signalCallbackHandler;
 //  sigaction(SIGTSTP, &sa2, NULL);
+  
+  signal(SIGTSTP, signalCallbackHandler);
+  signal(SIGINT, signalCallbackHandler);
   
   while (TRUE)
   {
@@ -286,10 +295,10 @@ int main(int argc, char **argv) {
 //    pid_t pid;
     int pipeFd[2];
     int bgProcessFlag = FALSE;
-//    pid = getpid();
+    pid = getpid();
 
     // print string prompt
-    printf("dragonshell > ");
+    printf("dragonshell (%d) > ", pid);
     fflush(stdout);
     fgets(&input[0], PATH_MAX, stdin);
     if (input[0] == '\n')
@@ -494,14 +503,16 @@ int main(int argc, char **argv) {
             printf("dragonshell: command not found\n");
             _exit(0);
           }
-//          _exit(0);
+          
         } else {
           if (bgProcessFlag == FALSE)
           {
             waitpid(pid, &status, 0);
           } else
           {
-            printf("Process %d was created\n", pid);
+            signal(SIGCHLD,SIG_IGN);
+            bgpid = pid;
+            printf("Process %d was put in the BG\n", bgpid);
           }
         }
         
