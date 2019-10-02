@@ -208,36 +208,36 @@ int executeCmd(char ** cmdArgs) {
   return rc;
 }
 
-int basicCmds(char ** cmdArgs) {
-  /* check and execute if basic built-in command */
-  if (strcmp(cmdArgs[0], "cd") == 0)
-  {
-    if (cmdArgs[1] != NULL)
-    {
-      changeDirectory(cmdArgs[1]);
-    }
-    return 0;
-  }
-  else if (strcmp(cmdArgs[0], "pwd") == 0)
-  {
-    printWorkingDirectory();
-    return 0;
-  }
-  else if (strcmp(cmdArgs[0], "$PATH") == 0) // show $PATH variable
-  {
-    showPath();
-    return 0;
-  }
-  else if (strcmp(cmdArgs[0], "a2path") == 0)
-  {
-    if (cmdArgs[2] == NULL)
-    {
-      addToPath(cmdArgs[1]);
-    }
-    return 0;
-  }
-  return -1;
-}
+//int basicCmds(char ** cmdArgs) {
+//  /* check and execute if basic built-in command */
+//  if (strcmp(cmdArgs[0], "cd") == 0)
+//  {
+//    if (cmdArgs[1] != NULL)
+//    {
+//      changeDirectory(cmdArgs[1]);
+//    }
+//    return 0;
+//  }
+//  else if (strcmp(cmdArgs[0], "pwd") == 0)
+//  {
+//    printWorkingDirectory();
+//    return 0;
+//  }
+//  else if (strcmp(cmdArgs[0], "$PATH") == 0) // show $PATH variable
+//  {
+//    showPath();
+//    return 0;
+//  }
+//  else if (strcmp(cmdArgs[0], "a2path") == 0)
+//  {
+//    if (cmdArgs[2] == NULL)
+//    {
+//      addToPath(cmdArgs[1]);
+//    }
+//    return 0;
+//  }
+//  return -1;
+//}
 
 void exitProg() {
   printf("Farewell...\n");
@@ -323,200 +323,190 @@ int main(int argc, char **argv) {
     {
       char * cmdArgs[PATH_MAX] = {NULL};
 
-      if ((pid = fork()) < 0)
+      // tokenize into input cmd and output file using delimiter '>'
+      char * inOutToks[PATH_MAX] = {NULL};
+      tokenize(tokArgs[i], ">", &inOutToks[0]);
+
+      if (inOutToks[1] != NULL)
       {
-        printf("dragonshell: fork error!\n");
-      }
-      if (pid == 0)
+        // Output file was supplied, write stdout to specified filename
+        redirOutputFlag = TRUE;
+
+        // Get filename
+        char * filename = strtok(inOutToks[1], " ");
+
+        // Open
+        fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        if (fd == -1) {
+          printf("dragonshell: Could not open file.\n");
+          _exit(1);
+        }
+        // Use dup2 to use opened file fd and STDOUT fd interchangeably
+        if (dup2(fd, STDOUT_FILENO) == -1) {
+          printf("dragonshell: Could not create file descriptor copy.\n");
+          close(fd);
+          _exit(1);
+        }
+      } 
+      
+      if (bgProcessFlag == TRUE)
       {
-        // tokenize into input cmd and output file using delimiter '>'
-        char * inOutToks[PATH_MAX] = {NULL};
-        tokenize(tokArgs[i], ">", &inOutToks[0]);
-
-        if (inOutToks[1] != NULL)
-        {
-          // Output file was supplied, write stdout to specified filename
-          redirOutputFlag = TRUE;
-
-          // Get filename
-          char * filename = strtok(inOutToks[1], " ");
-
-          // Open
-          fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-          if (fd == -1) {
-            printf("dragonshell: Could not open file.\n");
-            _exit(1);
-          }
-          // Use dup2 to use opened file fd and STDOUT fd interchangeably
-          if (dup2(fd, STDOUT_FILENO) == -1) {
-            printf("dragonshell: Could not create file descriptor copy.\n");
-            close(fd);
-            _exit(1);
-          }
-        } else if (bgProcessFlag == TRUE)
-        {
+        pid = fork();
+        
+        if (pid == 0)
+        { 
           close(STDOUT_FILENO);
           close(STDERR_FILENO);
         }
-        
-//        if (bgProcessFlag == TRUE)
-//        {
-//          close(STDOUT_FILENO); // add error check
-//        }
+        else
+        {
+         
+          break;
+        }
+      }
 
         // tokenize into pipe sections using delimiter '|'
-        char * pipeCmds[PATH_MAX] = {NULL};
-        tokenize(inOutToks[0], "|", &pipeCmds[0]);
-        if (pipeCmds[1] != NULL)
+      char * pipeCmds[PATH_MAX] = {NULL};
+      tokenize(inOutToks[0], "|", &pipeCmds[0]);
+      if (pipeCmds[1] != NULL)
+      {
+        int pipeRc;
+        if ((pipeRc = pipe(pipeFd)) == -1)
         {
-          int pipeRc;
-          if ((pipeRc = pipe(pipeFd)) == -1)
-          {
-            printf("dragonshell: pipe error!\n");
-            _exit(1);
-          }
+          printf("dragonshell: pipe error!\n");
+          _exit(1);
+        }
 
-          int rwIdx; // read or write end of pipe
+        int rwIdx; // read or write end of pipe
 
-          pid_t cid;
-          if ((cid = fork()) < 0) {
-            printf("dragonshell: fork error!\n");
-            _exit(1);
-          }
-          if (cid > 0)
+        pid_t cid;
+        if ((cid = fork()) < 0) {
+          printf("dragonshell: fork error!\n");
+          _exit(1);
+        }
+        if (cid > 0)
+        {
+          // parent proceeds
+          rwIdx = 1; // parent reads
+          close(pipeFd[1]); // close write end
+          dup2(pipeFd[0], STDIN_FILENO);
+          close(pipeFd[0]);
+        }
+        else if (cid == 0)
+        {
+          // child proceeds
+          rwIdx = 0; //child writes
+          close(pipeFd[0]); // close read end
+          dup2(pipeFd[1], STDOUT_FILENO);
+          close(pipeFd[1]);
+        }
+        // tokenize into separate commands/arguments using delimiter ' '
+        tokenize(pipeCmds[rwIdx], " ", &cmdArgs[0]);
+      }
+      else
+      {
+        // tokenize into separate commands/arguments using delimiter ' '
+        tokenize(pipeCmds[0], " ", &cmdArgs[0]);
+      }
+
+      // printf("cmdArgs[0]: %s\n", cmdArgs[0]);
+      if (cmdArgs[0] == NULL) break;
+      // Decide if should be background process based on last cmd line arg
+      /* TO-DO: has to come before getting rid of quotes*/
+
+      // get rid of quotation marks around commands/arguments so they can be properly exec'd
+      int k = 0;
+      while (cmdArgs[k] != NULL)
+      {
+        removeQuotes(cmdArgs[k]);
+        // printf("removed quotes, remains: %s\n", cmdArgs[k]);
+        k++;
+      }
+
+      /* check and execute if basic built-in command */
+        if (strcmp(cmdArgs[0], "cd") == 0)
+        {
+          if (cmdArgs[1] != NULL)
           {
-            // parent proceeds
-            rwIdx = 1; // parent reads
-            close(pipeFd[1]); // close write end
-            dup2(pipeFd[0], STDIN_FILENO);
-            close(pipeFd[0]);
+            changeDirectory(cmdArgs[1]);
           }
-          else if (cid == 0)
+        }
+        else if (strcmp(cmdArgs[0], "pwd") == 0)
+        {
+          pid = fork();
+          if (pid == 0)
           {
-            // child proceeds
-            rwIdx = 0; //child writes
-            close(pipeFd[0]); // close read end
-            dup2(pipeFd[1], STDOUT_FILENO);
-            close(pipeFd[1]);
+          printWorkingDirectory();
+          } else {
+            waitpid(pid, &status, 0);
           }
-          // tokenize into separate commands/arguments using delimiter ' '
-          tokenize(pipeCmds[rwIdx], " ", &cmdArgs[0]);
+        }
+        else if (strcmp(cmdArgs[0], "$PATH") == 0) // show $PATH variable
+        {
+          
+          pid = fork();
+          if (pid == 0)
+          {
+            showPath();
+          } else {
+            waitpid(pid, &status, 0);
+          }
+        }
+        else if (strcmp(cmdArgs[0], "a2path") == 0)
+        {
+          if (cmdArgs[2] == NULL)
+          {
+            addToPath(cmdArgs[1]);
+          }
+        }
+        else if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
+        {
+          exitProg();
         }
         else
         {
-          // tokenize into separate commands/arguments using delimiter ' '
-          tokenize(pipeCmds[0], " ", &cmdArgs[0]);
-        }
-
-        // printf("cmdArgs[0]: %s\n", cmdArgs[0]);
-        if (cmdArgs[0] == NULL) break;
-        // Decide if should be background process based on last cmd line arg
-        /* TO-DO: has to come before getting rid of quotes*/
-
-        // get rid of quotation marks around commands/arguments so they can be properly exec'd
-        int k = 0;
-        while (cmdArgs[k] != NULL)
-        {
-          removeQuotes(cmdArgs[k]);
-          // printf("removed quotes, remains: %s\n", cmdArgs[k]);
-          k++;
-        }
-
-        /* Check and execute if built-in command */
-        int rc = basicCmds(cmdArgs);
-        if (rc != 0) // It wasn't a basic command, check other cases
-        {
-          if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
+          int rc;
+          pid = fork();
+          if (pid == 0)
           {
-//            fflush(stdout);
-//            _exit(0);
-            exitProg();
-          }
-          else
-          {
-            int rc;
             if ((rc = executeCmd(cmdArgs)) == -1)
             {
               // print error message
               printf("dragonshell: command not found\n");
             }
+          } else {
+            waitpid(pid, &status, 0);
           }
-          fflush(stdout);
-          if (redirOutputFlag == TRUE)
-          {
-            if (close(fd) == -1)
-            {
-              printf("dragonshell: Error closing file.\n");
-              _exit(1);
-            }
-          }
+          
         }
-        _exit(0);
-      }
-      else
-      {
-
-        // need to retokenize since child process' local variables no longer accessible
-        tokenize(tokArgs[i], " ", &cmdArgs[0]);
-                
-        // again, get rid of quotation marks around commands/arguments so they can be properly exec'd
-        int k = 0;
-        while (cmdArgs[k] != NULL)
+        fflush(stdout);
+        if (redirOutputFlag == TRUE)
         {
-          removeQuotes(cmdArgs[k]);
-          k++;
+          if (close(fd) == -1)
+          {
+            printf("dragonshell: Error closing file.\n");
+            _exit(1);
+          }
         }
-        
-//        printf("Parent: bgprocessflag is %d\n", bgProcessFlag);
+   
+        printf("Parent: bgprocessflag is %d\n", bgProcessFlag);
         
         // if not BG process, wait for process to complete before returning to prompt
         if (bgProcessFlag == FALSE)
         {
         
-          waitpid(pid, &status, 0);
+          waitpid(getpid(), &status, 0);
         }
         else
         {
-//          printf("pid: %d\n", getpid());
 //          wait(&status);
-          break;
-        }
-
-        // Decide what command to run based on first cmd line arg
-        if (strcmp(cmdArgs[0], "cd") == 0)
-        {
-          // printf("changing directory from parent\n");
-          changeDirectory(cmdArgs[1]);
-        }
-        else if (strcmp(cmdArgs[0], "a2path") == 0)
-        {
-          if ((cmdArgs[2] != NULL) && (strcmp(cmdArgs[2], ">") != 0))
-          {
-            printf("dragonshell: a2path only supports one command argument.\n");
-          }
-          else
-          {
-            addToPath(cmdArgs[1]);
-          }
+          _exit(0);
+//          break;
         }
 
         fflush(stdout);
 
-        if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
-        {
-          // TO-DO: close all active forked processes, might need to move up to _exit to a new exitProg function
-          fflush(stdout);
-    
-          // Make sure all running process and background processed killed...
-          exitProg();
-//          if (kill(0, SIGKILL) != 0)
-//          {
-//            printf("dragonshell: Problem with killing process.\n");
-//          }
-          
-//          _exit(0);
-        }
-      }
+
     i++; // increment semicolon-separated commands counter
     }
   }
