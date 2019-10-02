@@ -197,11 +197,6 @@ int executeCmd(char ** cmdArgs) {
       strcpy(tmp, paths[j]);
       strcat(tmp, "/");
       rc = execve(strcat(tmp, cmdArgs[0]), argv1, envp1);
-      if (rc == 0)
-      {
-        _exit(0);
-        break;
-      }
       j++;
     }
   }
@@ -349,21 +344,21 @@ int main(int argc, char **argv) {
         }
       } 
       
-      if (bgProcessFlag == TRUE)
-      {
-        pid = fork();
-        
-        if (pid == 0)
-        { 
-          close(STDOUT_FILENO);
-          close(STDERR_FILENO);
-        }
-        else
-        {
-         
-          break;
-        }
-      }
+//      if (bgProcessFlag == TRUE)
+//      {
+//        pid = fork();
+//        
+//        if (pid == 0)
+//        { 
+//          close(STDOUT_FILENO);
+//          close(STDERR_FILENO);
+//        }
+//        else
+//        {
+//         
+//          break;
+//        }
+//      }
 
         // tokenize into pipe sections using delimiter '|'
       char * pipeCmds[PATH_MAX] = {NULL};
@@ -424,90 +419,101 @@ int main(int argc, char **argv) {
       }
 
       /* check and execute if basic built-in command */
-        if (strcmp(cmdArgs[0], "cd") == 0)
+      if (strcmp(cmdArgs[0], "cd") == 0)
+      {
+        if (cmdArgs[1] != NULL)
         {
-          if (cmdArgs[1] != NULL)
-          {
-            changeDirectory(cmdArgs[1]);
-          }
+          changeDirectory(cmdArgs[1]);
         }
-        else if (strcmp(cmdArgs[0], "pwd") == 0)
+      }
+      else if (strcmp(cmdArgs[0], "pwd") == 0)
+      {
+        pid = fork();
+        if (pid == 0)
         {
-          pid = fork();
-          if (pid == 0)
-          {
-          printWorkingDirectory();
-          } else {
-            waitpid(pid, &status, 0);
-          }
+        printWorkingDirectory();
+        } else {
+          waitpid(pid, &status, 0);
         }
-        else if (strcmp(cmdArgs[0], "$PATH") == 0) // show $PATH variable
-        {
-          
-          pid = fork();
-          if (pid == 0)
-          {
-            showPath();
-          } else {
-            waitpid(pid, &status, 0);
-          }
-        }
-        else if (strcmp(cmdArgs[0], "a2path") == 0)
-        {
-          if (cmdArgs[2] == NULL)
-          {
-            addToPath(cmdArgs[1]);
-          }
-        }
-        else if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
-        {
-          exitProg();
-        }
-        else
-        {
-          int rc;
-          pid = fork();
-          if (pid == 0)
-          {
-            if ((rc = executeCmd(cmdArgs)) == -1)
-            {
-              // print error message
-              printf("dragonshell: command not found\n");
-            }
-          } else {
-            waitpid(pid, &status, 0);
-          }
-          
-        }
-        fflush(stdout);
-        if (redirOutputFlag == TRUE)
-        {
-          if (close(fd) == -1)
-          {
-            printf("dragonshell: Error closing file.\n");
-            _exit(1);
-          }
-        }
-   
-        printf("Parent: bgprocessflag is %d\n", bgProcessFlag);
+      }
+      else if (strcmp(cmdArgs[0], "$PATH") == 0) // show $PATH variable
+      {
         
-        // if not BG process, wait for process to complete before returning to prompt
-        if (bgProcessFlag == FALSE)
+        pid = fork();
+        if (pid == 0)
         {
+          showPath();
+        } else {
+          waitpid(pid, &status, 0);
+        }
+      }
+      else if (strcmp(cmdArgs[0], "a2path") == 0)
+      {
+        if (cmdArgs[2] == NULL)
+        {
+          addToPath(cmdArgs[1]);
+        }
+      }
+      else if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
+      {
+        exitProg();
+      }
+      else
+      {
+        int rc;
+        pid = fork();
+        if (pid == 0)
+        {
+          if (bgProcessFlag == TRUE)
+          {
+            close(STDOUT_FILENO);
+            close(STDERR_FILENO);
+          }
+          if ((rc = executeCmd(cmdArgs)) == -1)
+          {
+            // print error message
+            printf("dragonshell: command not found\n");
+            _exit(0);
+          }
+          
+        } else {
+          if (bgProcessFlag == FALSE)
+          {
+            waitpid(pid, &status, 0);
+          }
+        }
         
-          waitpid(getpid(), &status, 0);
-        }
-        else
+      }
+      fflush(stdout);
+      if (redirOutputFlag == TRUE)
+      {
+        if (close(fd) == -1)
         {
-//          wait(&status);
-          _exit(0);
-//          break;
+          printf("dragonshell: Error closing file.\n");
+          _exit(1);
         }
+      }
+ 
+      printf("Parent: bgprocessflag is %d\n", bgProcessFlag);
+      
+      // if not BG process, wait for process to complete before returning to prompt
+//        if (bgProcessFlag == FALSE)
+//        {
+//        
+//          waitpid(getpid(), &status, 0);
+//        }
+//        else
+//        {
+////          wait(&status);
+////          _exit(0);
+//          kill(getpid(), SIGKILL);
+////          break;
+//        }
 
-        fflush(stdout);
+      fflush(stdout);
 
 
-    i++; // increment semicolon-separated commands counter
+      i++; // increment semicolon-separated commands counter
     }
   }
   return 0;
