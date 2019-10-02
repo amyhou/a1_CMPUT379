@@ -16,11 +16,16 @@
 #include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <limits.h>
+//#include <limits.h>
+#include <signal.h>
 
 /* Questions:
   1. Do we need to fflush after each printf statement?
-  2. Should output be suppressed on exit? ("Killed")
+  2. Should output be suppressed on exit (use kill() in exit func?)? ("Killed")
+  3. Should we do anything when ^C ^Z received??? --> should send to child processes
+  4. Can we use limits.h
+  5. Why do I have zombie processes?
+  6. For CTRL D, check if input is equal to null terminator, exit if so
 */
 
 /*
@@ -32,6 +37,7 @@
 /* ------------------------------ DEFINE MACROS ---------------------------- */
 #define TRUE  (1)
 #define FALSE (0)
+#define PATH_MAX (500)
 /* --------------------------- END OF DEFINED MACROS ----------------------- */
 
 /* ----------------------------- GLOBAL VARIABLES -------------------------- */
@@ -86,6 +92,13 @@ void removeQuotes(char * str) {
         i--;
     }
   }
+}
+
+/* Signal Handling */
+void signalCallbackHandler(int signum)
+{ 
+  printf("Caught signal with signum %d\n", signum);
+  return;
 }
 
 void changeDirectory(char * dirPath) {
@@ -184,6 +197,11 @@ int executeCmd(char ** cmdArgs) {
       strcpy(tmp, paths[j]);
       strcat(tmp, "/");
       rc = execve(strcat(tmp, cmdArgs[0]), argv1, envp1);
+      if (rc == 0)
+      {
+        _exit(0);
+        break;
+      }
       j++;
     }
   }
@@ -220,18 +238,36 @@ int basicCmds(char ** cmdArgs) {
   }
   return -1;
 }
+
+void exitProg() {
+  printf("Farewell...\n");
+  if (kill(0, SIGKILL) != 0)
+  {
+    printf("dragonshell: Problem with killing process.\n");
+  }
+}
+
 /* ------------------------ END OF FUNCTION DEFINITIONS -------------------- */
 
 /* ------------------------------ MAIN PROGRAM ----------------------------- */
 int main(int argc, char **argv) {
   /* Welcome message! */
   welcomeMsg();
+  
+  /* Set up signal handling */
+  struct sigaction dragonshell_sa;
+  dragonshell_sa.sa_flags = 0;
+  sigemptyset(&dragonshell_sa.sa_mask);
+  dragonshell_sa.sa_handler = signalCallbackHandler;
+//  sigaction(SIGINT, &dragonshell_sa, NULL);
+//  sigaction(SIGTSTP, &dragonshell_sa, NULL);
+  
   while (TRUE)
   {
     char input[PATH_MAX] = "";
     char * tokArgs[PATH_MAX] = {NULL};
     int i = 0;
-    int fd, status;
+    int fd, fd2, status;
     int redirOutputFlag = FALSE;
     pid_t pid;
     int pipeFd[2];
@@ -240,11 +276,15 @@ int main(int argc, char **argv) {
     // print string prompt
     printf("dragonshell > ");
     fflush(stdout);
-    if (fgets(&input[0], PATH_MAX, stdin) == NULL)
+    fgets(&input[0], PATH_MAX, stdin);
+    if (input[0] == '\n')
     {
-      printf("\ndragonshell: Failed to read from stdin.\n");
-      fflush(stdout);
       continue;
+    }
+    else if (input[0] == '\0') // ctrl-D was pressed
+    {
+      printf("\n");
+      exitProg();
     }
 
     // get rid of newline character at end
@@ -257,17 +297,17 @@ int main(int argc, char **argv) {
     // Check for bg process
     for (int i = len-1; i >=0; i--)
     {
-      printf("input[i]: %c\n", input[i]);
+//      printf("input[i]: %c\n", input[i]);
       if ((input[i] == ' ') || (input[i]=='\t') || (input[i]=='\0') || (input[i]=='\n'))
       {
-        printf("space or tab encountered\n");
+//        printf("space or tab encountered\n");
         continue;
       }
       else if (input[i] == '&')
       {
         bgProcessFlag = TRUE;
         input[i] = '\0';
-        printf("bgprocessflag set to true\n");
+//        printf("bgprocessflag set to true\n");
         break;
       }
       else
@@ -313,6 +353,10 @@ int main(int argc, char **argv) {
             close(fd);
             _exit(1);
           }
+        } else if (bgProcessFlag == TRUE)
+        {
+          close(STDOUT_FILENO);
+          close(STDERR_FILENO);
         }
         
 //        if (bgProcessFlag == TRUE)
@@ -384,8 +428,9 @@ int main(int argc, char **argv) {
         {
           if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
           {
-            fflush(stdout);
-            _exit(0);
+//            fflush(stdout);
+//            _exit(0);
+            exitProg();
           }
           else
           {
@@ -422,7 +467,7 @@ int main(int argc, char **argv) {
           k++;
         }
         
-        printf("Parent: bgprocessflag is %d\n", bgProcessFlag);
+//        printf("Parent: bgprocessflag is %d\n", bgProcessFlag);
         
         // if not BG process, wait for process to complete before returning to prompt
         if (bgProcessFlag == FALSE)
@@ -432,7 +477,7 @@ int main(int argc, char **argv) {
         }
         else
         {
-          printf("pid: %d\n", getpid());
+//          printf("pid: %d\n", getpid());
 //          wait(&status);
           break;
         }
@@ -463,13 +508,13 @@ int main(int argc, char **argv) {
           fflush(stdout);
     
           // Make sure all running process and background processed killed...
-          printf("Goodbye!\n");
-          if (kill(0, SIGKILL) != 0)
-          {
-            printf("dragonshell: Problem with killing process.\n");
-          }
+          exitProg();
+//          if (kill(0, SIGKILL) != 0)
+//          {
+//            printf("dragonshell: Problem with killing process.\n");
+//          }
           
-          _exit(0);
+//          _exit(0);
         }
       }
     i++; // increment semicolon-separated commands counter
