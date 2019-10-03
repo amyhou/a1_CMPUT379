@@ -99,11 +99,14 @@ void removeQuotes(char * str) {
 
 /* Signal Handling */
 void signalCallbackHandler(int signum)
-{ 
-  printf("Caught signal with signum %d\n", signum);
-  if (ppid != bgpid)
+{
+  printf("\n");
+  if (signum == SIGTSTP)
   {
-    kill(bgpid, SIGKILL);
+    if (ppid != bgpid)
+    {
+      kill(bgpid, SIGKILL);
+    }
   }
 }
 
@@ -186,10 +189,26 @@ int executeCmd(char ** cmdArgs) {
   * Returns:
   *   rc - return code is 0 for success, -1 for failure to execute program
   */
-  char ** argv1 = cmdArgs;
-  char * envp1[] = {NULL}; // change this!
-  // printf("cmdArgs[1]: %s\n", cmdArgs[1]);
-  fflush(stdout);
+  char * argv1[PATH_MAX];
+  char * envp1[PATH_MAX]; // change this!
+  int argCount = 0;
+  int envCount = 0;
+  for (int i=0; i<PATH_MAX; i++) {
+    if (cmdArgs[i] == NULL)
+    {
+      break;
+    }
+    else if (strchr(cmdArgs[i], '=') != NULL)
+    {
+      envp1[envCount] = cmdArgs[i];
+      envCount++;
+    }
+    else
+    {
+      argv1[argCount] = cmdArgs[i];
+      argCount++;
+    }
+  }
   int rc = execve(cmdArgs[0], argv1, envp1);
   if (rc == -1)
   {
@@ -247,8 +266,8 @@ int basicCmds(char ** cmdArgs) {
 
 void exitProg() {
   printf("Farewell...\n");
-  printf("ppid: %d\n", ppid);
-  
+  // printf("ppid: %d\n", ppid);
+
   killpg(ppid, SIGTERM);
 }
 
@@ -260,25 +279,25 @@ int main(int argc, char **argv) {
   welcomeMsg();
   ppid = getpid();
   bgpid = ppid;
-    
+
   /* Set up signal handling */
   signal(SIGINT, signalCallbackHandler);
   signal(SIGTSTP, signalCallbackHandler);
-  
+
   while (TRUE)
   {
     char input[PATH_MAX] = "";
     char * tokArgs[PATH_MAX] = {NULL};
     int i = 0;
-    int fd, fd2, status;
+    int fd, status;
     int redirOutputFlag = FALSE;
-    
+
     int pipeFd[2];
     int bgProcessFlag = FALSE;
     pid = getpid();
 
     // print string prompt
-    printf("dragonshell > (%d)", pid);
+    printf("dragonshell > ");
     fflush(stdout);
     fgets(&input[0], PATH_MAX, stdin);
     if (input[0] == '\n')
@@ -297,7 +316,7 @@ int main(int argc, char **argv) {
     {
       input[len - 1] = '\0';
     }
-    
+
     // Check for bg process
     for (int i = len-1; i >=0; i--)
     {
@@ -362,11 +381,6 @@ int main(int argc, char **argv) {
           close(STDOUT_FILENO);
           close(STDERR_FILENO);
         }
-        
-//        if (bgProcessFlag == TRUE)
-//        {
-//          close(STDOUT_FILENO); // add error check
-//        }
 
         // tokenize into pipe sections using delimiter '|'
         char * pipeCmds[PATH_MAX] = {NULL};
@@ -412,17 +426,14 @@ int main(int argc, char **argv) {
           tokenize(pipeCmds[0], " ", &cmdArgs[0]);
         }
 
-        // printf("cmdArgs[0]: %s\n", cmdArgs[0]);
         if (cmdArgs[0] == NULL) break;
         // Decide if should be background process based on last cmd line arg
-        /* TO-DO: has to come before getting rid of quotes*/
 
         // get rid of quotation marks around commands/arguments so they can be properly exec'd
         int k = 0;
         while (cmdArgs[k] != NULL)
         {
           removeQuotes(cmdArgs[k]);
-          // printf("removed quotes, remains: %s\n", cmdArgs[k]);
           k++;
         }
 
@@ -432,42 +443,36 @@ int main(int argc, char **argv) {
         {
           if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
           {
-//            fflush(stdout);
-//            _exit(0);
             exitProg();
           }
           else
           {
             int rc;
-//            pid = fork();
-//            
-//            if (pid == 0)
-//            {
-              if (bgProcessFlag == TRUE)
-              {
-                close(STDOUT_FILENO);
-                close(STDERR_FILENO);
-                setpgid(pid,ppid);
-                printf("pgid: %d\n", getpgid(pid));
-              }
-              if ((rc = executeCmd(cmdArgs)) == -1)
-                          {
-                            // print error message
-                            printf("dragonshell: command not found\n");
-                            _exit(1);
-                          }
-              _exit(0);
-//            } else {
-              if (bgProcessFlag == FALSE)
-              {
-                waitpid(pid, &status, 0);
-              } else {
-                signal(SIGCHLD, SIG_IGN);
-                bgpid = pid;
-                printf("Process %d was put in the background.\n", bgpid);
-              }
-//            }
-            
+            if (bgProcessFlag == TRUE)
+            {
+              close(STDOUT_FILENO);
+              close(STDERR_FILENO);
+              setpgid(pid,ppid);
+              printf("pgid: %d\n", getpgid(pid));
+            }
+            if ((rc = executeCmd(cmdArgs)) == -1)
+            {
+              // print error message
+              printf("dragonshell: command not found\n");
+              _exit(1);
+            }
+            _exit(0);
+
+            if (bgProcessFlag == FALSE)
+            {
+              waitpid(pid, &status, 0);
+            }
+            else
+            {
+              signal(SIGCHLD, SIG_IGN);
+              bgpid = pid;
+              printf("Process %d was put in the background.\n", bgpid);
+            }
           }
           fflush(stdout);
           if (redirOutputFlag == TRUE)
@@ -483,10 +488,9 @@ int main(int argc, char **argv) {
       }
       else
       {
-
         // need to retokenize since child process' local variables no longer accessible
         tokenize(tokArgs[i], " ", &cmdArgs[0]);
-                
+
         // again, get rid of quotation marks around commands/arguments so they can be properly exec'd
         int k = 0;
         while (cmdArgs[k] != NULL)
@@ -494,13 +498,10 @@ int main(int argc, char **argv) {
           removeQuotes(cmdArgs[k]);
           k++;
         }
-        
-//        printf("Parent: bgprocessflag is %d\n", bgProcessFlag);
-        
+
         // if not BG process, wait for process to complete before returning to prompt
         if (bgProcessFlag == FALSE)
         {
-        
           waitpid(pid, &status, 0);
         }
         else
@@ -535,15 +536,9 @@ int main(int argc, char **argv) {
         {
           // TO-DO: close all active forked processes, might need to move up to _exit to a new exitProg function
           fflush(stdout);
-    
+
           // Make sure all running process and background processed killed...
           exitProg();
-//          if (kill(0, SIGKILL) != 0)
-//          {
-//            printf("dragonshell: Problem with killing process.\n");
-//          }
-          
-//          _exit(0);
         }
       }
     i++; // increment semicolon-separated commands counter
