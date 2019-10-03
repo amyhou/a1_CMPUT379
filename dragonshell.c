@@ -13,10 +13,9 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <fcntl.h>
-#include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
-//#include <limits.h>
+#include <limits.h>
 #include <signal.h>
 
 /* Questions:
@@ -37,7 +36,6 @@
 /* ------------------------------ DEFINE MACROS ---------------------------- */
 #define TRUE  (1)
 #define FALSE (0)
-#define PATH_MAX (500)
 /* --------------------------- END OF DEFINED MACROS ----------------------- */
 
 /* ----------------------------- GLOBAL VARIABLES -------------------------- */
@@ -49,7 +47,7 @@ pid_t bgpid;
 
 /* -------------------------- FUNCTIONS DEFINITIONS ------------------------ */
 void welcomeMsg() {
-  /* Print welcome message (make fancier later) */
+  /* Print shell welcome message */
   printf("\n");
   printf("--------------------------------------------------------------------------------\n\n");
   printf("________                                       ________.__           .__  .__\n");
@@ -80,6 +78,7 @@ void tokenize(char* str, const char* delim, char ** argv) {
 }
 
 void removeQuotes(char * str) {
+  /* Removes all quotation marks from string */
   int i, j;
   int len = strlen(str);
   for(i = 0; i < len; i++)
@@ -100,18 +99,17 @@ void removeQuotes(char * str) {
 /* Signal Handling */
 void signalCallbackHandler(int signum)
 {
-  printf("\n");
-  if (signum == SIGTSTP)
+  /* Handles caught signals by passing signum to child processes
+  *  of main dragonshell process
+  */
+  if (ppid != bgpid)
   {
-    if (ppid != bgpid)
-    {
-      kill(bgpid, SIGKILL);
-    }
+    kill(bgpid, signum);
   }
 }
 
 void changeDirectory(char * dirPath) {
-  /*  Changed directory to the one specified by input path.
+  /*  Changes directory to the one specified by input path.
   *   Input param:
   *     dirPath - path to directory relative to current working directory
   *   Returns:
@@ -131,18 +129,23 @@ void changeDirectory(char * dirPath) {
 }
 
 void printWorkingDirectory() {
+  /* Prints out path to current working directory. */
   char path[PATH_MAX];
   printf("%s\n", getcwd(path, PATH_MAX));
   fflush(stdout);
 }
 
 void showPath() {
-  /* Prints out $PATH */
+  /* Prints out shell $PATH variable. */
   printf("Current PATH: %s\n", shellPath);
 }
 
 void addToPath(char * path) {
-  /* Adds path param to $PATH variable */
+  /* Appends path to $PATH variable if path given as $PATH:<new-path>
+  *  If a new path is given without prefix "$PATH", sets $PATH to new path.
+  *  Input:
+  *        path - new path to be added to $PATH variable
+  */
   int i = 0;
   char * newPaths[PATH_MAX] = {NULL};
 
@@ -154,7 +157,6 @@ void addToPath(char * path) {
   tokenize(&path[0], ":", &newPaths[0]);
   if (strcmp(newPaths[0], "$PATH") != 0)
   {
-    // printf("Clearing $PATH var\n");
     memset(&shellPath[0], 0, sizeof(shellPath));
   }
   else
@@ -169,7 +171,6 @@ void addToPath(char * path) {
   {
     strcat(shellPath, newPaths[i]);
     strcat(shellPath, ":");
-    // printf("new shellPath = %s\n", shellPath);
     i++;
   }
   // Get rid of trailing ":"
@@ -189,26 +190,9 @@ int executeCmd(char ** cmdArgs) {
   * Returns:
   *   rc - return code is 0 for success, -1 for failure to execute program
   */
-  char * argv1[PATH_MAX];
-  char * envp1[PATH_MAX]; // change this!
-  int argCount = 0;
-  int envCount = 0;
-  for (int i=0; i<PATH_MAX; i++) {
-    if (cmdArgs[i] == NULL)
-    {
-      break;
-    }
-    else if (strchr(cmdArgs[i], '=') != NULL)
-    {
-      envp1[envCount] = cmdArgs[i];
-      envCount++;
-    }
-    else
-    {
-      argv1[argCount] = cmdArgs[i];
-      argCount++;
-    }
-  }
+  char ** argv1 = cmdArgs;
+  char * envp1[] = {NULL}; //  set to NULL array
+
   int rc = execve(cmdArgs[0], argv1, envp1);
   if (rc == -1)
   {
@@ -217,7 +201,6 @@ int executeCmd(char ** cmdArgs) {
     int j = 0;
     while (paths[j] != NULL)
     {
-      // printf("Try to execute from paths[j]: %s\n", paths[j]);
       char tmp[PATH_MAX];
       strcpy(tmp, paths[j]);
       strcat(tmp, "/");
@@ -234,7 +217,7 @@ int executeCmd(char ** cmdArgs) {
 }
 
 int basicCmds(char ** cmdArgs) {
-  /* check and execute if basic built-in command */
+  /* Check and execute if the command is a basic built-in command. */
   if (strcmp(cmdArgs[0], "cd") == 0)
   {
     if (cmdArgs[1] != NULL)
@@ -265,10 +248,16 @@ int basicCmds(char ** cmdArgs) {
 }
 
 void exitProg() {
-  printf("Farewell...\n");
-  // printf("ppid: %d\n", ppid);
-
-  killpg(ppid, SIGTERM);
+  /* "Gracefully" exits dragonshell after cleaning up running child processes. */
+  if (bgpid != ppid) {
+    kill(bgpid, SIGKILL);
+  }
+  if (pid == 0)
+  {
+    _exit(0);
+  }
+  printf("...Farewell...\n");
+  _exit(0);
 }
 
 /* ------------------------ END OF FUNCTION DEFINITIONS -------------------- */
@@ -277,6 +266,8 @@ void exitProg() {
 int main(int argc, char **argv) {
   /* Welcome message! */
   welcomeMsg();
+
+  /* Default/initial parent process and background process IDs */
   ppid = getpid();
   bgpid = ppid;
 
@@ -284,53 +275,60 @@ int main(int argc, char **argv) {
   signal(SIGINT, signalCallbackHandler);
   signal(SIGTSTP, signalCallbackHandler);
 
-  while (TRUE)
+  while (TRUE) // dragonshell prompt loop
   {
     char input[PATH_MAX] = "";
     char * tokArgs[PATH_MAX] = {NULL};
     int i = 0;
     int fd, status;
     int redirOutputFlag = FALSE;
-
     int pipeFd[2];
     int bgProcessFlag = FALSE;
+
+    /* Initial current process ID */
     pid = getpid();
 
-    // print string prompt
+    /* Print dragonshell prompt string */
     printf("dragonshell > ");
     fflush(stdout);
-    fgets(&input[0], PATH_MAX, stdin);
+
+    /* Get input string */
+    if (fgets(&input[0], PATH_MAX, stdin) == NULL)
+    {
+      if (input[0] == '\0')
+      {
+        printf("\n");
+        exitProg();
+      }
+      else
+      {
+        printf("dragonshell: error getting input from stdin.\n");
+      }
+    }
     if (input[0] == '\n')
     {
       continue;
     }
-    else if (input[0] == '\0') // ctrl-D was pressed
-    {
-      printf("\n");
-      exitProg();
-    }
 
-    // get rid of newline character at end
+    /* Get rid of newline character at end */
     size_t len = strlen(input);
     if (len > 0 && input[len - 1] == '\n')
     {
       input[len - 1] = '\0';
     }
 
-    // Check for bg process
+    /* Check if this is to be a background process */
     for (int i = len-1; i >=0; i--)
     {
-//      printf("input[i]: %c\n", input[i]);
+      /* If last character is '&', it is background process */
       if ((input[i] == ' ') || (input[i]=='\t') || (input[i]=='\0') || (input[i]=='\n'))
       {
-//        printf("space or tab encountered\n");
         continue;
       }
       else if (input[i] == '&')
       {
         bgProcessFlag = TRUE;
         input[i] = '\0';
-//        printf("bgprocessflag set to true\n");
         break;
       }
       else
@@ -450,8 +448,8 @@ int main(int argc, char **argv) {
             int rc;
             if (bgProcessFlag == TRUE)
             {
-              close(STDOUT_FILENO);
-              close(STDERR_FILENO);
+              // close(STDOUT_FILENO);
+              // close(STDERR_FILENO);
               setpgid(pid,ppid);
               printf("pgid: %d\n", getpgid(pid));
             }
@@ -469,7 +467,7 @@ int main(int argc, char **argv) {
             }
             else
             {
-              signal(SIGCHLD, SIG_IGN);
+              // signal(SIGCHLD, SIG_IGN);
               bgpid = pid;
               printf("Process %d was put in the background.\n", bgpid);
             }
