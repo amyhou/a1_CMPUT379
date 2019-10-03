@@ -104,7 +104,9 @@ void signalCallbackHandler(int signum)
 //  printf("saved pid: %d\n", pid);
 //  printf("saved bgpid: %d\n", bgpid);
 //  printf("check ppid: %d\n", ppid);
-  printf("Caught signal with int value %d\n", signum);
+//  printf("Caught signal with int value %d\n", signum);
+  // if SIGTSTP, stop bg process
+  // if SIGINT, interrupt child processes
   if (ppid != bgpid)
   {
 //    printf("kill bg process");
@@ -215,48 +217,12 @@ int executeCmd(char ** cmdArgs) {
   return rc;
 }
 
-//int basicCmds(char ** cmdArgs) {
-//  /* check and execute if basic built-in command */
-//  if (strcmp(cmdArgs[0], "cd") == 0)
-//  {
-//    if (cmdArgs[1] != NULL)
-//    {
-//      changeDirectory(cmdArgs[1]);
-//    }
-//    return 0;
-//  }
-//  else if (strcmp(cmdArgs[0], "pwd") == 0)
-//  {
-//    printWorkingDirectory();
-//    return 0;
-//  }
-//  else if (strcmp(cmdArgs[0], "$PATH") == 0) // show $PATH variable
-//  {
-//    showPath();
-//    return 0;
-//  }
-//  else if (strcmp(cmdArgs[0], "a2path") == 0)
-//  {
-//    if (cmdArgs[2] == NULL)
-//    {
-//      addToPath(cmdArgs[1]);
-//    }
-//    return 0;
-//  }
-//  return -1;
-//}
-
 void exitProg() {
   printf("Farewell...\n");
   printf("%d\n", ppid);
-//  if (pid == 0)
-//  {
+
   killpg(ppid, SIGTERM);
-//  }
-//  else {
-//    _exit(0);
-//  }
-//  kill(0, SIGKILL);
+
 }
 
 /* ------------------------ END OF FUNCTION DEFINITIONS -------------------- */
@@ -268,19 +234,6 @@ int main(int argc, char **argv) {
  
   ppid = getpid(); // initial parent process pid
   bgpid = ppid;  // initial bg process pid placeholder value
-  
-//  /* Set up signal handling */
-//  struct sigaction sa;
-//  sa.sa_flags = 0;
-//  sigemptyset(&sa.sa_mask);
-//  sa.sa_handler = exitProg;
-//  sigaction(SIGINT, &sa, NULL);
-//  
-//  struct sigaction sa2;
-//  sa2.sa_flags = 0;
-//  sigemptyset(&sa2.sa_mask);
-//  sa2.sa_handler = signalCallbackHandler;
-//  sigaction(SIGTSTP, &sa2, NULL);
   
   signal(SIGTSTP, signalCallbackHandler);
   signal(SIGINT, signalCallbackHandler);
@@ -331,7 +284,7 @@ int main(int argc, char **argv) {
       {
         bgProcessFlag = TRUE;
         input[i] = '\0';
-//        printf("bgprocessflag set to true\n");
+        printf("bgprocessflag set to true\n");
         break;
       }
       else
@@ -353,12 +306,21 @@ int main(int argc, char **argv) {
 
       if (inOutToks[1] != NULL)
       {
+        pid = fork();
+        
+        
+        if (pid > 0) {
+          waitpid(pid, &status, 0);
+          continue;
+        } else
+        {
+
         // Output file was supplied, write stdout to specified filename
         redirOutputFlag = TRUE;
 
         // Get filename
         char * filename = strtok(inOutToks[1], " ");
-
+        
         // Open
         fd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         if (fd == -1) {
@@ -370,6 +332,7 @@ int main(int argc, char **argv) {
           printf("dragonshell: Could not create file descriptor copy.\n");
           close(fd);
           _exit(1);
+        }
         }
       } 
 
@@ -395,6 +358,7 @@ int main(int argc, char **argv) {
         if (cid > 0)
         {
           // parent proceeds
+          printf("Parent reads\n");
           rwIdx = 1; // parent reads
           close(pipeFd[1]); // close write end
           dup2(pipeFd[0], STDIN_FILENO);
@@ -403,6 +367,7 @@ int main(int argc, char **argv) {
         else if (cid == 0)
         {
           // child proceeds
+          printf("Child writes\n");
           rwIdx = 0; //child writes
           close(pipeFd[0]); // close read end
           dup2(pipeFd[1], STDOUT_FILENO);
@@ -503,6 +468,7 @@ int main(int argc, char **argv) {
             printf("dragonshell: command not found\n");
             _exit(0);
           }
+          _exit(0);
           
         } else {
           if (bgProcessFlag == FALSE)
@@ -520,21 +486,23 @@ int main(int argc, char **argv) {
       fflush(stdout);
       if (redirOutputFlag == TRUE)
       {
+        printf("closing file\n");
         if (close(fd) == -1)
         {
           printf("dragonshell: Error closing file.\n");
           _exit(1);
         }
+        _exit(0);
       }
  
       printf("Parent: bgprocessflag is %d\n", bgProcessFlag);
       
-      // if not BG process, wait for process to complete before returning to prompt
-//        if (bgProcessFlag == FALSE)
-//        {
-//        
-//          waitpid(getpid(), &status, 0);
-//        }
+//      if not BG process, wait for process to complete before returning to prompt
+        if (bgProcessFlag == FALSE)
+        {
+        
+          waitpid(getpid(), &status, 0);
+        }
 //        else
 //        {
 ////          wait(&status);
