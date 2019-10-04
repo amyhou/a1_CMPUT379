@@ -118,7 +118,7 @@ void changeDirectory(char * dirPath) {
   int rc;
   if (dirPath == NULL)
   {
-    printf("dragonshell: expected argument to \"cd\"\n");
+    printf("dragonshell: Expected argument to \"cd\"\n");
     return;
   }
   if ((rc = chdir(dirPath)) != 0)
@@ -302,7 +302,7 @@ int main(int argc, char **argv) {
       }
       else
       {
-        printf("dragonshell: error getting input from stdin.\n");
+        printf("dragonshell: Error getting input from stdin.\n");
       }
     }
     if (input[0] == '\n')
@@ -346,7 +346,7 @@ int main(int argc, char **argv) {
 
       if ((pid = fork()) < 0)
       {
-        printf("dragonshell: fork error!\n");
+        printf("dragonshell: Fork error!\n");
       }
       if (pid == 0)
       {
@@ -388,7 +388,7 @@ int main(int argc, char **argv) {
           int pipeRc;
           if ((pipeRc = pipe(pipeFd)) == -1)
           {
-            printf("dragonshell: pipe error!\n");
+            printf("dragonshell: Pipe error!\n");
             _exit(1);
           }
 
@@ -396,7 +396,7 @@ int main(int argc, char **argv) {
 
           pid_t cid;
           if ((cid = fork()) < 0) {
-            printf("dragonshell: fork error!\n");
+            printf("dragonshell: Fork error!\n");
             _exit(1);
           }
           if (cid > 0)
@@ -456,7 +456,7 @@ int main(int argc, char **argv) {
             if ((rc = executeCmd(cmdArgs)) == -1)
             {
               // print error message
-              printf("dragonshell: command not found\n");
+              printf("dragonshell: Command not found\n");
               _exit(1);
             }
             _exit(0);
@@ -513,7 +513,6 @@ int main(int argc, char **argv) {
         // Decide what command to run based on first cmd line arg
         if (strcmp(cmdArgs[0], "cd") == 0)
         {
-          // printf("changing directory from parent\n");
           changeDirectory(cmdArgs[1]);
         }
         else if (strcmp(cmdArgs[0], "a2path") == 0)
@@ -532,14 +531,14 @@ int main(int argc, char **argv) {
 
         if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
         {
-          // TO-DO: close all active forked processes, might need to move up to _exit to a new exitProg function
+          // Time to exit this dragonshell
           fflush(stdout);
 
           // Make sure all running process and background processed killed...
           exitProg();
         }
       }
-    i++; // increment semicolon-separated commands counter
+      i++; // increment semicolon-separated commands counter
     }
   }
   return 0;
