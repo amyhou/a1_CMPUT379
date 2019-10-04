@@ -91,6 +91,10 @@ void signalCallbackHandler(int signum)
   {
     kill(bgpid, signum);
   }
+  if (pid == 0)
+  {
+    kill (pid, signum);
+  }
 }
 
 void changeDirectory(char * dirPath) {
