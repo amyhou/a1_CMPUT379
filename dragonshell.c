@@ -256,7 +256,7 @@ void exitProg() {
   {
     _exit(0);
   }
-  printf("...Farewell...\n");
+  printf("\n\n...Farewell...\n");
   _exit(0);
 }
 
@@ -491,7 +491,7 @@ int main(int argc, char **argv) {
             {
               // signal(SIGCHLD, SIG_IGN);
               bgpid = pid;
-              printf("Process %d was put in the background.\n", bgpid);
+              printf("PID %d is running in the background\n", bgpid);
             }
           }
           fflush(stdout);
