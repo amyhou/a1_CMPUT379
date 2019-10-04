@@ -442,7 +442,6 @@ int main(int argc, char **argv) {
           {
             close(STDOUT_FILENO);
             changeDirectory(cmdArgs[1]);
-            open(STDOUT_FILENO);
           }
         }
         else if (strcmp(cmdArgs[0], "pwd") == 0)
