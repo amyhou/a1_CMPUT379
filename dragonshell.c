@@ -359,7 +359,7 @@ int main(int argc, char **argv) {
             close(fd);
             _exit(1);
           }
-        } 
+        }
 
         // tokenize into pipe sections using delimiter '|'
         char * pipeCmds[PATH_MAX] = {NULL};
