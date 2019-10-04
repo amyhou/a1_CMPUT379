@@ -18,21 +18,6 @@
 #include <limits.h>
 #include <signal.h>
 
-/* Questions:
-  1. Do we need to fflush after each printf statement?
-  2. Should output be suppressed on exit (use kill() in exit func?)? ("Killed")
-  3. Should we do anything when ^C ^Z received??? --> should send to child processes
-  4. Can we use limits.h
-  5. Why do I have zombie processes?
-  6. For CTRL D, check if input is equal to null terminator, exit if so
-*/
-
-/*
-  1. Suppress output when sent process in BG
-  2. Handling signals
-  3. Exit needs to kill all running processes
-*/
-
 /* ------------------------------ DEFINE MACROS ---------------------------- */
 #define TRUE  (1)
 #define FALSE (0)
@@ -374,11 +359,7 @@ int main(int argc, char **argv) {
             close(fd);
             _exit(1);
           }
-        } else if (bgProcessFlag == TRUE)
-        {
-          close(STDOUT_FILENO);
-          close(STDERR_FILENO);
-        }
+        } 
 
         // tokenize into pipe sections using delimiter '|'
         char * pipeCmds[PATH_MAX] = {NULL};
@@ -448,8 +429,8 @@ int main(int argc, char **argv) {
             int rc;
             if (bgProcessFlag == TRUE)
             {
-              // close(STDOUT_FILENO);
-              // close(STDERR_FILENO);
+              close(STDOUT_FILENO);
+              close(STDERR_FILENO);
               setpgid(pid,ppid);
               printf("pgid: %d\n", getpgid(pid));
             }
@@ -460,17 +441,6 @@ int main(int argc, char **argv) {
               _exit(1);
             }
             _exit(0);
-
-            if (bgProcessFlag == FALSE)
-            {
-              waitpid(pid, &status, 0);
-            }
-            else
-            {
-              // signal(SIGCHLD, SIG_IGN);
-              bgpid = pid;
-              printf("Process %d was put in the background.\n", bgpid);
-            }
           }
           fflush(stdout);
           if (redirOutputFlag == TRUE)
