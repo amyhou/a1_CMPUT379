@@ -2,14 +2,17 @@ CC = gcc
 CFLAGS = -Wall -O2
 OBJECTS = dragonshell.o
 
-.PHONY: all clean
+.PHONY: all clean compress compile
 
 all: dragonshell
 
 clean:
-	rm *.o dragonshell
+	rm -f *.o dragonshell.tar.gz dragonshell
 
-dragonshell.o: dragonshell.c
+compress:
+	tar -cvzf dragonshell.tar.gz Makefile dragonshell.c README.*
+
+compile: dragonshell.c
 	$(CC) $(CFLAGS) -c dragonshell.c -o dragonshell.o
 
 dragonshell: $(OBJECTS)
