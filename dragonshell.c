@@ -18,21 +18,6 @@
 #include <limits.h>
 #include <signal.h>
 
-/* Questions:
-  1. Do we need to fflush after each printf statement?
-  2. Should output be suppressed on exit (use kill() in exit func?)? ("Killed")
-  3. Should we do anything when ^C ^Z received??? --> should send to child processes
-  4. Can we use limits.h
-  5. Why do I have zombie processes?
-  6. For CTRL D, check if input is equal to null terminator, exit if so
-*/
-
-/*
-  1. Suppress output when sent process in BG
-  2. Handling signals
-  3. Exit needs to kill all running processes
-*/
-
 /* ------------------------------ DEFINE MACROS ---------------------------- */
 #define TRUE  (1)
 #define FALSE (0)
@@ -118,7 +103,7 @@ void changeDirectory(char * dirPath) {
   int rc;
   if (dirPath == NULL)
   {
-    printf("dragonshell: Expected argument to \"cd\"\n");
+    printf("dragonshell: expected argument to \"cd\"\n");
     return;
   }
   if ((rc = chdir(dirPath)) != 0)
@@ -256,7 +241,7 @@ void exitProg() {
   {
     _exit(0);
   }
-  printf("\n\n...Farewell...\n");
+  printf("...Farewell...\n");
   _exit(0);
 }
 
@@ -302,7 +287,7 @@ int main(int argc, char **argv) {
       }
       else
       {
-        printf("dragonshell: Error getting input from stdin.\n");
+        printf("dragonshell: error getting input from stdin.\n");
       }
     }
     if (input[0] == '\n')
@@ -346,7 +331,7 @@ int main(int argc, char **argv) {
 
       if ((pid = fork()) < 0)
       {
-        printf("dragonshell: Fork error!\n");
+        printf("dragonshell: fork error!\n");
       }
       if (pid == 0)
       {
@@ -374,11 +359,7 @@ int main(int argc, char **argv) {
             close(fd);
             _exit(1);
           }
-        } else if (bgProcessFlag == TRUE)
-        {
-          close(STDOUT_FILENO);
-          close(STDERR_FILENO);
-        }
+        } 
 
         // tokenize into pipe sections using delimiter '|'
         char * pipeCmds[PATH_MAX] = {NULL};
@@ -388,7 +369,7 @@ int main(int argc, char **argv) {
           int pipeRc;
           if ((pipeRc = pipe(pipeFd)) == -1)
           {
-            printf("dragonshell: Pipe error!\n");
+            printf("dragonshell: pipe error!\n");
             _exit(1);
           }
 
@@ -396,7 +377,7 @@ int main(int argc, char **argv) {
 
           pid_t cid;
           if ((cid = fork()) < 0) {
-            printf("dragonshell: Fork error!\n");
+            printf("dragonshell: fork error!\n");
             _exit(1);
           }
           if (cid > 0)
@@ -436,30 +417,8 @@ int main(int argc, char **argv) {
         }
 
         /* Check and execute if built-in command */
-        if (strcmp(cmdArgs[0], "cd") == 0)
-        {
-          if (cmdArgs[1] != NULL)
-          {
-            close(STDOUT_FILENO);
-            changeDirectory(cmdArgs[1]);
-          }
-        }
-        else if (strcmp(cmdArgs[0], "pwd") == 0)
-        {
-          printWorkingDirectory();
-        }
-        else if (strcmp(cmdArgs[0], "$PATH") == 0) // show $PATH variable
-        {
-          showPath();
-        }
-        else if (strcmp(cmdArgs[0], "a2path") == 0)
-        {
-          if (cmdArgs[2] == NULL)
-          {
-            addToPath(cmdArgs[1]);
-          }
-        }
-        else // It wasn't a basic command, check other cases
+        int rc = basicCmds(cmdArgs);
+        if (rc != 0) // It wasn't a basic command, check other cases
         {
           if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
           {
@@ -470,29 +429,18 @@ int main(int argc, char **argv) {
             int rc;
             if (bgProcessFlag == TRUE)
             {
-              // close(STDOUT_FILENO);
-              // close(STDERR_FILENO);
+              close(STDOUT_FILENO);
+              close(STDERR_FILENO);
               setpgid(pid,ppid);
               printf("pgid: %d\n", getpgid(pid));
             }
             if ((rc = executeCmd(cmdArgs)) == -1)
             {
               // print error message
-              printf("dragonshell: Command not found\n");
+              printf("dragonshell: command not found\n");
               _exit(1);
             }
             _exit(0);
-
-            if (bgProcessFlag == FALSE)
-            {
-              waitpid(pid, &status, 0);
-            }
-            else
-            {
-              // signal(SIGCHLD, SIG_IGN);
-              bgpid = pid;
-              printf("PID %d is running in the background\n", bgpid);
-            }
           }
           fflush(stdout);
           if (redirOutputFlag == TRUE)
@@ -535,6 +483,7 @@ int main(int argc, char **argv) {
         // Decide what command to run based on first cmd line arg
         if (strcmp(cmdArgs[0], "cd") == 0)
         {
+          // printf("changing directory from parent\n");
           changeDirectory(cmdArgs[1]);
         }
         else if (strcmp(cmdArgs[0], "a2path") == 0)
@@ -553,14 +502,14 @@ int main(int argc, char **argv) {
 
         if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
         {
-          // Time to exit this dragonshell
+          // TO-DO: close all active forked processes, might need to move up to _exit to a new exitProg function
           fflush(stdout);
 
           // Make sure all running process and background processed killed...
           exitProg();
         }
       }
-      i++; // increment semicolon-separated commands counter
+    i++; // increment semicolon-separated commands counter
     }
   }
   return 0;
