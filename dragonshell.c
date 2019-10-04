@@ -178,12 +178,11 @@ int executeCmd(char ** cmdArgs) {
   char ** argv1 = cmdArgs;
   char * envp1[] = {NULL}; //  set to NULL array
 
-
   int rc = execve(cmdArgs[0], argv1, envp1);
   if (strchr(cmdArgs[0], '/') != NULL) {
     return rc;
   }
-  
+
   if (rc == -1)
   {
     char * paths[PATH_MAX] = {NULL};
