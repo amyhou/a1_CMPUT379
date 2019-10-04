@@ -436,8 +436,31 @@ int main(int argc, char **argv) {
         }
 
         /* Check and execute if built-in command */
-        int rc = basicCmds(cmdArgs);
-        if (rc != 0) // It wasn't a basic command, check other cases
+        if (strcmp(cmdArgs[0], "cd") == 0)
+        {
+          if (cmdArgs[1] != NULL)
+          {
+            close(STDOUT_FILENO);
+            changeDirectory(cmdArgs[1]);
+            open(STDOUT_FILENO);
+          }
+        }
+        else if (strcmp(cmdArgs[0], "pwd") == 0)
+        {
+          printWorkingDirectory();
+        }
+        else if (strcmp(cmdArgs[0], "$PATH") == 0) // show $PATH variable
+        {
+          showPath();
+        }
+        else if (strcmp(cmdArgs[0], "a2path") == 0)
+        {
+          if (cmdArgs[2] == NULL)
+          {
+            addToPath(cmdArgs[1]);
+          }
+        }
+        else // It wasn't a basic command, check other cases
         {
           if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
           {
