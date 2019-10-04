@@ -36,7 +36,11 @@ Program maintains a global variable containing the dragonshell $PATH variable. W
 
 ### a2path
 #### System calls used:
+* None
+
 #### Design:
+When shell receives command starting with a2path, it calls addToPath helper function and passes to it the user-supplied path to be added to $PATH. It then checks if this path is of format "$PATH:<new path>". If $PATH is not at the beginning, it overwrites $PATH variable with new path. Otherwise, it simply appends new path to the end of the existing $PATH variable.
+
 #### Testing:
 
 ### Execute commands
@@ -48,6 +52,7 @@ Program maintains a global variable containing the dragonshell $PATH variable. W
 #### System calls used:
 #### Design:
 #### Testing:
+
 
 ### Redirecting Output
 #### System calls used:

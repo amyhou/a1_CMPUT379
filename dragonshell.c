@@ -178,7 +178,12 @@ int executeCmd(char ** cmdArgs) {
   char ** argv1 = cmdArgs;
   char * envp1[] = {NULL}; //  set to NULL array
 
+
   int rc = execve(cmdArgs[0], argv1, envp1);
+  if (strchr(cmdArgs[0], '/') != NULL) {
+    return rc;
+  }
+  
   if (rc == -1)
   {
     char * paths[PATH_MAX] = {NULL};
@@ -188,7 +193,10 @@ int executeCmd(char ** cmdArgs) {
     {
       char tmp[PATH_MAX];
       strcpy(tmp, paths[j]);
-      strcat(tmp, "/");
+      if (tmp[strlen(tmp)-1] != '/')
+      {
+        strcat(tmp, "/");
+      }
       rc = execve(strcat(tmp, cmdArgs[0]), argv1, envp1);
       if (rc == 0)
       {
@@ -241,7 +249,7 @@ void exitProg() {
   {
     _exit(0);
   }
-  printf("...Farewell...\n");
+  printf("\n...Farewell...\n\n");
   _exit(0);
 }
 
