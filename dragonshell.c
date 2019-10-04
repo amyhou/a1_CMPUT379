@@ -476,14 +476,13 @@ int main(int argc, char **argv) {
         {
           signal(SIGCHLD, SIG_IGN);
           bgpid = pid;
-          printf("Process %d was put in the background\n", bgpid);
+          printf("PID %d is running in the background\n", bgpid);
           break;
         }
 
         // Decide what command to run based on first cmd line arg
         if (strcmp(cmdArgs[0], "cd") == 0)
         {
-          // printf("changing directory from parent\n");
           changeDirectory(cmdArgs[1]);
         }
         else if (strcmp(cmdArgs[0], "a2path") == 0)
@@ -502,7 +501,7 @@ int main(int argc, char **argv) {
 
         if (strcmp(cmdArgs[0], "exit") == 0) // exit dragonshell
         {
-          // TO-DO: close all active forked processes, might need to move up to _exit to a new exitProg function
+          // Time to exit the shell!
           fflush(stdout);
 
           // Make sure all running process and background processed killed...
