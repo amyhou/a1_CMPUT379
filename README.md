@@ -76,7 +76,7 @@ Show $PATH, then run a2path with or without $PATH in front of new path and check
 | a2path                | $PATH returns "Current PATH: " |
 
 
-### Execute commands
+### Execute External Programs
 #### System calls used:
 * execve
 
@@ -159,6 +159,19 @@ Examples:
 **cd /cshome; ls** brings us to /cshome directory, and then shows what's inside /cshome
 
 **a2path /bin; $PATH** overwrites $PATH variable and then displays "/bin"
+
+
+### Background Processes
+#### System calls used:
+* fork
+* setpgid
+* close
+
+#### Design:
+If there is an ampersand (&) at the end of the command, we put it in the background by letting the child process execute the command. Stdout and stderr get closed for the child to suppress any output it gives. Meanwhile, the parent continues on and assigns the group pid of the child background process to the parent pid. We also update the global background pid variable to equal the newly created pid. Then the parent goes back to the shell prompt. When child finishes executing the command, it returns silently.
+
+#### Testing:
+Put a sleep 50s process into the background with **sleep 50s &**. Command **ps** shows the newly created process, and it remains for 50s before completing execution and disappears from the list of pids. Also successfully tested putting built-in commands in the background.
 
 
 ### Exiting
