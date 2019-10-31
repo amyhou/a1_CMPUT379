@@ -54,6 +54,7 @@ Program maintains a global variable containing the dragonshell $PATH variable. W
 
 #### Testing:
 Tested by entering $PATH both before and after calling a2path.
+
 | Test Input        | Returned result |
 |:------------------|:------          |
 | $PATH             | Current PATH: /bin/:/usr/bin/ |
@@ -69,6 +70,7 @@ When shell receives command starting with a2path, it calls addToPath helper func
 
 #### Testing:
 Show $PATH, then run a2path with or without $PATH in front of new path and check again.
+
 | Test Input        | Returned result |
 |:------------------|:------          |
 | a2path $PATH:/cshome/ | $PATH returns "Current PATH: /bin/:/usr/bin/:/cshome/" |
